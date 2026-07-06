@@ -4,8 +4,15 @@ import pytest
 from pyicloud.exceptions import PyiCloudFailedLoginException
 
 from app import icloud_client
-from app.errors import InvalidCredentialsError, TwoFactorRequiredError
+from app.errors import InvalidCredentialsError, TooManyAttemptsError, TwoFactorRequiredError
 from app.models import Person
+
+
+@pytest.fixture(autouse=True)
+def _reset_2fa_attempts():
+    icloud_client._failed_2fa_attempts.clear()
+    yield
+    icloud_client._failed_2fa_attempts.clear()
 
 
 @patch("app.icloud_client.PyiCloudService")
@@ -103,3 +110,35 @@ def test_get_people_raises_invalid_credentials_on_expired_session(mock_service_c
 
     with pytest.raises(InvalidCredentialsError):
         icloud_client.get_people("user@example.com")
+
+
+@patch("app.icloud_client.PyiCloudService")
+def test_submit_2fa_locks_out_after_max_failures(mock_service_cls, monkeypatch, tmp_path):
+    monkeypatch.setenv("COOKIE_ROOT", str(tmp_path))
+    mock_api = MagicMock()
+    mock_api.validate_2fa_code.return_value = False
+    mock_service_cls.return_value = mock_api
+
+    for _ in range(5):
+        assert icloud_client.submit_2fa("user@example.com", "000000") is False
+
+    with pytest.raises(TooManyAttemptsError):
+        icloud_client.submit_2fa("user@example.com", "000000")
+
+
+@patch("app.icloud_client.PyiCloudService")
+def test_submit_2fa_success_clears_failure_count(mock_service_cls, monkeypatch, tmp_path):
+    monkeypatch.setenv("COOKIE_ROOT", str(tmp_path))
+    mock_api = MagicMock()
+    mock_service_cls.return_value = mock_api
+
+    mock_api.validate_2fa_code.return_value = False
+    for _ in range(4):
+        icloud_client.submit_2fa("user@example.com", "000000")
+
+    mock_api.validate_2fa_code.return_value = True
+    assert icloud_client.submit_2fa("user@example.com", "123456") is True
+
+    mock_api.validate_2fa_code.return_value = False
+    for _ in range(4):
+        assert icloud_client.submit_2fa("user@example.com", "000000") is False

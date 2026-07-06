@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app import icloud_client
-from app.errors import InvalidCredentialsError
+from app.errors import InvalidCredentialsError, TooManyAttemptsError
 from app.security import require_internal_token
 
 router = APIRouter(prefix="/accounts", tags=["accounts"], dependencies=[Depends(require_internal_token)])
@@ -33,4 +33,6 @@ def submit_2fa(apple_id: str, body: TwoFARequest):
             raise HTTPException(status_code=400, detail="invalid code")
     except InvalidCredentialsError:
         raise HTTPException(status_code=401, detail="session expired or invalid credentials")
+    except TooManyAttemptsError:
+        raise HTTPException(status_code=429, detail="too many attempts, try again later")
     return {"status": "active"}

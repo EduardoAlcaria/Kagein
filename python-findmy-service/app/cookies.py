@@ -8,7 +8,7 @@ def cookie_root() -> Path:
 
 
 def cookie_directory_for(apple_id: str) -> str:
-    digest = hashlib.sha256(apple_id.encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(apple_id.strip().lower().encode("utf-8")).hexdigest()
     path = cookie_root() / digest
     path.mkdir(parents=True, exist_ok=True)
     return str(path)

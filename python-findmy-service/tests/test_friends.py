@@ -39,3 +39,26 @@ def test_parse_people_falls_back_to_id_when_name_missing():
     people = parse_people(data)
 
     assert people[0].name == "friend-3"
+
+
+def test_parse_people_handles_null_name_fields():
+    data = {
+        "locations": [{"id": "friend-4", "location": {"latitude": 1.0, "longitude": 2.0, "timestamp": 100}}],
+        "contactDetails": [{"id": "friend-4", "firstName": None, "lastName": "Lee"}],
+    }
+
+    people = parse_people(data)
+
+    assert people[0].name == "Lee"
+    assert "None" not in people[0].name
+
+
+def test_parse_people_falls_back_to_id_when_all_name_fields_null():
+    data = {
+        "locations": [{"id": "friend-5", "location": {"latitude": 1.0, "longitude": 2.0, "timestamp": 100}}],
+        "contactDetails": [{"id": "friend-5", "firstName": None, "lastName": None}],
+    }
+
+    people = parse_people(data)
+
+    assert people[0].name == "friend-5"

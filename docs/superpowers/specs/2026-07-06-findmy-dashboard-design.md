@@ -11,15 +11,15 @@ the "People" tab of Apple's Find My app (family/friends location sharing),
 not the account's own devices. Single user, self-hosted on a Mac mini,
 local-first, tunneled to the internet later.
 
-Motivation: understand the People/family-sharing side of the Find My
-protocol well enough to build a better viewer than Apple's — richer
+Motivation: build a better viewer than Apple's own People tab — richer
 history and custom alerts (arrived/left, been stationary too long, stopped
-updating) — without needing a physical iPhone on hand (auth happens
-against Apple's cloud, not a local device).
+updating) — using the existing iCloud web session Apple's Find My app
+itself uses, no physical iPhone needed (auth happens against Apple's
+cloud, not a local device).
 
 ## Goals
 
-- Register an Apple ID (SRP login + 2FA) and keep the session alive.
+- Register an Apple ID (iCloud web login + 2FA) and keep the session alive.
 - Pull everyone who shares their location with that Apple ID via Find My's
   People/family-sharing feature: name, current location, last-seen time.
 - Store location history over time for each person (not just latest ping).
@@ -31,18 +31,47 @@ against Apple's cloud, not a local device).
 
 - Tracking the account's own devices (iPhone/Mac/AirTag/AirPods) — out of
   scope, this app is about people-sharing data only.
+- AirTag / offline-finding BLE network protocol — that's a different,
+  heavier Apple protocol (device attestation via "anisette", encrypted
+  report decryption) that only applies to device tracking, not to People
+  tab data. Not needed here.
 - Multi-tenant / multi-user auth on the dashboard.
-- BLE offline-finding receiver (Mac mini as a Find My network node) — cloud
-  polling only for now.
 - iOS companion app (revisit once a physical iPhone is available).
-- Local searchpartyd cache parsing (research side-quest, not on critical path).
+
+## Protocol notes (why this is simpler than device tracking)
+
+Apple's Find My app actually talks to two distinct backend services:
+
+1. **Device tracking** ("Find My iPhone" / AirTag / offline-finding) — the
+   heavy, cryptographic protocol: device-specific key material, Apple
+   device attestation ("anisette") headers, encrypted location reports
+   that must be decrypted client-side. This is what OpenHaystack/FindMy.py
+   reverse-engineered. **Not used here.**
+2. **People sharing** ("Find My Friends", still called `fmf` internally) —
+   a plain iCloud web-session API. Once logged into icloud.com (the same
+   session pyicloud already establishes for iCloud Drive/Photos/etc.),
+   the friends endpoint is a single authenticated POST, no device
+   attestation, no client-side decryption:
+   - Webservice root: read from the account's webservices map under the
+     key `fmf` after login (same pattern pyicloud uses for `findme`).
+   - Endpoint: `POST {fmf_root}/fmipservice/client/fmfWeb/initClient`
+   - Response: list of friends, each with an `id` and a `location` object
+     containing `latitude`, `longitude`, `timestamp` (ms epoch),
+     `altitude`, `horizontalAccuracy`, `verticalAccuracy`, plus address
+     fields (`streetAddress`, `locality`, `stateCode`, `country`).
+
+This means python-findmy-service doesn't reimplement any Apple crypto —
+it reuses the `pyicloud` library (PyPI, actively maintained) for
+login/2FA/session persistence, and adds one small client for the `fmf`
+endpoint (not shipped in pyicloud's own package — there was an unmerged
+PR for it, so we write our own thin version against the same session).
 
 ## Architecture
 
-Four services, docker-compose, local-first:
+Three services, docker-compose, local-first:
 
 ```
-react-frontend  -->  spring-bff  -->  python-findmy-service  -->  anisette-server
+react-frontend  -->  spring-bff  -->  python-findmy-service
                          |                    |
                          v                    v
                      Postgres (app schema)  Postgres (findmy_raw schema)
@@ -50,21 +79,26 @@ react-frontend  -->  spring-bff  -->  python-findmy-service  -->  anisette-serve
 
 ### python-findmy-service (Python)
 
-Owns the reverse-engineered protocol. Responsibilities:
-- Apple ID login: SRP auth + 2FA challenge/response.
-- Anisette client: talks to the `anisette-server` container for device
-  attestation headers Apple requires on every call.
-- Fetch the People/family-sharing feed from Apple's Find My service —
-  the same data Apple's app shows under the "People" tab — for everyone
-  who currently shares their location with the registered Apple ID.
+Thin wrapper around `pyicloud` plus the `fmf` friends client. Responsibilities:
+- Apple ID login via `pyicloud.PyiCloudService` (handles the web-session
+  auth); 2FA via `requires_2fa` / `send_verification_code` /
+  `validate_verification_code` (or `validate_2fa_code` for HSA2 accounts).
+- Persist `pyicloud`'s cookie jar + session file per account so re-runs
+  don't require re-authenticating (pyicloud already writes these to a
+  `cookie_directory` — point it at a path backed by a Docker volume).
+- Friends client: read the `fmf` entry from `PyiCloudService._webservices`
+  after login, POST to `{fmf_root}/fmipservice/client/fmfWeb/initClient`,
+  parse the friend list into `{id, name, latitude, longitude, timestamp,
+  accuracy}`.
 - Internal REST API (not internet-facing, only spring-bff calls it):
   - `POST /accounts` — start login (email+password)
   - `POST /accounts/{id}/2fa` — submit 2FA code
   - `GET /accounts/{id}/people` — list of people sharing location + latest
     position/last-seen
-  - `GET /accounts/{id}/people/{personId}/locations` — location history
-- Persists raw session/trust tokens (sensitive) in its own Postgres schema
-  (`findmy_raw`), encrypted at rest with a server-side key from env config.
+- Persists session/cookie files (sensitive) on a Docker volume, path
+  recorded in its own Postgres schema (`findmy_raw`) alongside account
+  metadata; the files themselves are the credential, so the volume must
+  not be exposed outside the container.
 
 ### spring-bff (Java, Spring Boot)
 
@@ -87,26 +121,23 @@ The only service the frontend talks to. Responsibilities:
 - Talks only to spring-bff — never to python-findmy-service or Postgres
   directly.
 
-### anisette-server
-
-Existing open-source Docker image (SideStore-style anisette-v3-server).
-Internal only, only python-findmy-service calls it.
-
 ### Postgres
 
 Shared instance, two schemas:
-- `findmy_raw` — python-findmy-service: session/trust tokens, anisette cache.
+- `findmy_raw` — python-findmy-service: account metadata + session file
+  path/status (not the credential itself, which lives on the volume).
 - `app` — spring-bff: accounts (dashboard-level), people, location
   history, alert rules, alert events.
 
 ## Data flow
 
 1. User registers Apple ID in frontend → spring-bff → python-findmy-service
-   starts SRP login.
+   starts iCloud login via `pyicloud`.
 2. If Apple challenges with 2FA, python-findmy-service returns a
    "2fa-required" status; spring-bff relays it to the frontend, which
    prompts for the code; code is submitted back through the same chain.
-3. On success, python-findmy-service persists the session in `findmy_raw`.
+3. On success, python-findmy-service persists the session (cookie jar +
+   session file) on its volume, recorded in `findmy_raw`.
 4. spring-bff's scheduler polls python-findmy-service for the people feed
    on an interval, upserts into `app` schema, evaluates alert rules
    against the delta.
@@ -119,23 +150,25 @@ Shared instance, two schemas:
   turns into a code-entry prompt.
 - Apple rate-limiting / account lockout → backoff in python-findmy-service,
   surfaced as an account-level status the frontend can display.
-- anisette-server unreachable → health check + retry with backoff; poll
-  cycle skips that account and logs, doesn't crash the scheduler.
-- Decrypt failure on a single report → log and skip that report; rest of
-  the poll cycle continues.
+- Expired/invalid session (cookie no longer trusted) → python-findmy-service
+  reports an account status requiring re-login; spring-bff surfaces it
+  instead of silently failing polls.
+- Missing/partial friend data in a single poll (friend hasn't shared
+  recently) → keep last-known location, don't treat as an error.
 
 ## Deployment
 
-- docker-compose bundles all five containers (frontend, bff, python
-  service, anisette-server, postgres) for local run on the Mac mini.
+- docker-compose bundles four containers (frontend, bff, python service,
+  postgres) for local run on the Mac mini.
 - Later: front a tunnel (Cloudflare Tunnel or Tailscale funnel) only at
-  spring-bff + react-frontend. python-findmy-service, anisette-server, and
-  Postgres stay internal, never directly exposed.
+  spring-bff + react-frontend. python-findmy-service and Postgres stay
+  internal, never directly exposed.
 
 ## Testing strategy
 
-- python-findmy-service: unit tests around the crypto/decrypt path (use
-  known test vectors from prior art where available).
+- python-findmy-service: unit tests for the `fmf` response parser (fixture
+  JSON in, structured friend list out) and for 2FA state-machine handling,
+  mocking `pyicloud`'s `PyiCloudService`.
 - spring-bff: unit tests for alert rule evaluation; integration tests for
   the scheduler + persistence using Testcontainers Postgres.
 - react-frontend: light component tests; manual verification via running
@@ -143,15 +176,15 @@ Shared instance, two schemas:
 
 ## Implementation order
 
-1. python-findmy-service (protocol core) + anisette-server wiring.
+1. python-findmy-service (pyicloud auth + `fmf` friends client).
 2. spring-bff (auth, orchestration, scheduler, alert engine, persistence).
 3. react-frontend last, once backend/BFF APIs are stable.
 
 ## Open risks
 
-- Apple's Find My network protocol is unofficial/reverse-engineered; it can
-  change or trigger account flags without notice. Treat account lockout as
-  an expected failure mode, not an edge case.
-- Anisette emulation (non-jailbroken) is the single most fragile piece —
-  confirm it works against the real Apple ID early (spike before building
-  the rest of python-findmy-service).
+- The `fmf` endpoint is unofficial/undocumented; Apple can change or
+  remove it without notice. Treat parse failures and account lockout as
+  expected failure modes, not edge cases.
+- Automated logins can trip Apple's fraud/rate-limit detection — confirm
+  the login + 2FA + friends fetch works end to end against the real
+  Apple ID early (spike before building the rest of python-findmy-service).

@@ -943,12 +943,414 @@ git push
 
 ---
 
+## Task 8: Internal auth token, 2FA rate limiting, host port lockdown
+
+Added after an automated security review of Tasks 2-7 flagged two Broken
+Access Control findings: `POST /accounts/{apple_id}/people` had no way to
+verify the caller is entitled to that `apple_id` (IDOR-shaped), and
+`POST /accounts/{apple_id}/2fa` had no rate limiting on a 6-digit code
+(10^6 space, brute-forceable). Full per-caller/per-account auth (as a
+generic reviewer would suggest) doesn't fit this service's actual threat
+model — spring-bff is the only caller this service will ever have, for a
+single user's own account(s), not a multi-tenant system. The proportionate
+fix is: (1) a shared secret only spring-bff knows, so nothing else on the
+Docker network (or, if the port is ever misconfigured, the LAN) can call
+this service at all, and (2) a rate limit on 2FA attempts regardless of
+who's calling. Also: the docker-compose.yml written in Task 7 published
+port 8000 to all host interfaces (`"8000:8000"`) rather than binding it to
+localhost only — fixing that here too, since it's the same class of
+exposure.
+
+**Files:**
+- Create: `python-findmy-service/app/security.py`
+- Create: `python-findmy-service/tests/conftest.py`
+- Create: `python-findmy-service/tests/test_security.py`
+- Modify: `python-findmy-service/app/errors.py`
+- Modify: `python-findmy-service/app/icloud_client.py`
+- Modify: `python-findmy-service/app/routes/accounts.py`
+- Modify: `python-findmy-service/app/routes/people.py`
+- Modify: `python-findmy-service/tests/test_accounts_routes.py`
+- Modify: `python-findmy-service/tests/test_icloud_client.py`
+- Modify: `docker-compose.yml` (repo root)
+- Create: `.gitignore` (repo root)
+
+**Interfaces:**
+- Consumes: existing `app.routes.accounts.router`, `app.routes.people.router` (Task 6), `app.icloud_client.submit_2fa` (Task 5), `app.errors` (Task 5).
+- Produces: `security.require_internal_token` (FastAPI dependency, applied at router level to both routers), `errors.TooManyAttemptsError`.
+
+- [ ] **Step 1: Write the failing tests for the internal-token dependency**
+
+```python
+# python-findmy-service/tests/conftest.py
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def internal_service_token(monkeypatch):
+    monkeypatch.setenv("INTERNAL_SERVICE_TOKEN", "test-token")
+```
+
+```python
+# python-findmy-service/tests/test_security.py
+from unittest.mock import patch
+
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+client = TestClient(app)
+
+
+def test_health_does_not_require_token():
+    response = client.get("/health")
+    assert response.status_code == 200
+
+
+def test_people_endpoint_rejects_missing_token():
+    response = client.post("/accounts/user@example.com/people", json={})
+    assert response.status_code == 401
+
+
+def test_login_endpoint_rejects_wrong_token():
+    response = client.post(
+        "/accounts/login",
+        json={"apple_id": "user@example.com", "password": "hunter2"},
+        headers={"X-Internal-Token": "wrong"},
+    )
+    assert response.status_code == 401
+
+
+def test_login_endpoint_rejects_when_token_unset(monkeypatch):
+    monkeypatch.delenv("INTERNAL_SERVICE_TOKEN", raising=False)
+
+    response = client.post(
+        "/accounts/login",
+        json={"apple_id": "user@example.com", "password": "hunter2"},
+        headers={"X-Internal-Token": "test-token"},
+    )
+
+    assert response.status_code == 401
+
+
+@patch("app.routes.accounts.icloud_client.login")
+def test_login_endpoint_accepts_correct_token(mock_login):
+    mock_login.return_value = "active"
+
+    response = client.post(
+        "/accounts/login",
+        json={"apple_id": "user@example.com", "password": "hunter2"},
+        headers={"X-Internal-Token": "test-token"},
+    )
+
+    assert response.status_code == 200
+    mock_login.assert_called_once()
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `cd python-findmy-service && pytest tests/test_security.py -v`
+Expected: FAIL — `test_people_endpoint_rejects_missing_token` and
+`test_login_endpoint_rejects_wrong_token` currently return 200/other (no
+auth gate exists yet), not 401.
+
+- [ ] **Step 3: Implement the dependency and wire it into both routers**
+
+```python
+# python-findmy-service/app/security.py
+import os
+
+from fastapi import Header, HTTPException
+
+
+def require_internal_token(x_internal_token: str = Header(default="")) -> None:
+    expected = os.environ.get("INTERNAL_SERVICE_TOKEN")
+    if not expected or x_internal_token != expected:
+        raise HTTPException(status_code=401, detail="invalid or missing internal token")
+```
+
+In `python-findmy-service/app/routes/accounts.py`, change the imports and
+router declaration (keep everything else in the file unchanged):
+
+```python
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+
+from app import icloud_client
+from app.errors import InvalidCredentialsError, TooManyAttemptsError
+from app.security import require_internal_token
+
+router = APIRouter(prefix="/accounts", tags=["accounts"], dependencies=[Depends(require_internal_token)])
+```
+
+In `python-findmy-service/app/routes/people.py`, change the imports and
+router declaration (keep everything else in the file unchanged):
+
+```python
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+
+from app import icloud_client
+from app.errors import InvalidCredentialsError, TwoFactorRequiredError
+from app.security import require_internal_token
+
+router = APIRouter(prefix="/accounts", tags=["people"], dependencies=[Depends(require_internal_token)])
+```
+
+- [ ] **Step 4: Add the required header to every existing route test**
+
+In both `python-findmy-service/tests/test_accounts_routes.py` and
+`python-findmy-service/tests/test_people_routes.py`, add
+`headers={"X-Internal-Token": "test-token"}` as a kwarg to every existing
+`client.post(...)` call (5 calls in the accounts file, 3 in the people
+file). Nothing else in either file changes — the `conftest.py` autouse
+fixture from Step 1 makes `"test-token"` the valid value for the whole
+test session.
+
+Example (one of five in test_accounts_routes.py — apply the same kwarg
+to the other four `client.post` calls in that file, and all three in
+test_people_routes.py):
+
+```python
+    response = client.post(
+        "/accounts/login",
+        json={"apple_id": "user@example.com", "password": "hunter2"},
+        headers={"X-Internal-Token": "test-token"},
+    )
+```
+
+- [ ] **Step 5: Run the full suite to verify everything passes**
+
+Run: `cd python-findmy-service && pytest -v`
+Expected: PASS — all prior tasks' tests still pass (now sending the
+header), plus the 5 new `test_security.py` tests.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add python-findmy-service/app/security.py python-findmy-service/tests/conftest.py python-findmy-service/tests/test_security.py python-findmy-service/app/routes/accounts.py python-findmy-service/app/routes/people.py python-findmy-service/tests/test_accounts_routes.py python-findmy-service/tests/test_people_routes.py
+git commit -m "Require internal shared-secret token on accounts/people routes"
+git push
+```
+
+- [ ] **Step 7: Write the failing tests for 2FA attempt rate limiting**
+
+Add to `python-findmy-service/tests/test_icloud_client.py` (needs a new
+import: `from app.errors import TooManyAttemptsError` alongside the
+existing `InvalidCredentialsError, TwoFactorRequiredError` import, and a
+fixture to reset the module-level attempt counter between tests since
+it's a plain module dict, not per-test state):
+
+```python
+@pytest.fixture(autouse=True)
+def _reset_2fa_attempts():
+    icloud_client._failed_2fa_attempts.clear()
+    yield
+    icloud_client._failed_2fa_attempts.clear()
+```
+
+(add `from app import icloud_client` if the test file doesn't already
+import the module itself — check the existing `from app import
+icloud_client` / `from app.icloud_client import ...` style already used
+in this file and match it)
+
+```python
+@patch("app.icloud_client.PyiCloudService")
+def test_submit_2fa_locks_out_after_max_failures(mock_service_cls, monkeypatch, tmp_path):
+    monkeypatch.setenv("COOKIE_ROOT", str(tmp_path))
+    mock_api = MagicMock()
+    mock_api.validate_2fa_code.return_value = False
+    mock_service_cls.return_value = mock_api
+
+    for _ in range(5):
+        assert icloud_client.submit_2fa("user@example.com", "000000") is False
+
+    with pytest.raises(TooManyAttemptsError):
+        icloud_client.submit_2fa("user@example.com", "000000")
+
+
+@patch("app.icloud_client.PyiCloudService")
+def test_submit_2fa_success_clears_failure_count(mock_service_cls, monkeypatch, tmp_path):
+    monkeypatch.setenv("COOKIE_ROOT", str(tmp_path))
+    mock_api = MagicMock()
+    mock_service_cls.return_value = mock_api
+
+    mock_api.validate_2fa_code.return_value = False
+    for _ in range(4):
+        icloud_client.submit_2fa("user@example.com", "000000")
+
+    mock_api.validate_2fa_code.return_value = True
+    assert icloud_client.submit_2fa("user@example.com", "123456") is True
+
+    mock_api.validate_2fa_code.return_value = False
+    for _ in range(4):
+        assert icloud_client.submit_2fa("user@example.com", "000000") is False
+```
+
+- [ ] **Step 8: Run tests to verify they fail**
+
+Run: `cd python-findmy-service && pytest tests/test_icloud_client.py -v`
+Expected: FAIL — `TooManyAttemptsError` doesn't exist yet, `AttributeError`.
+
+- [ ] **Step 9: Implement rate limiting**
+
+```python
+# python-findmy-service/app/errors.py
+class InvalidCredentialsError(Exception):
+    pass
+
+
+class TwoFactorRequiredError(Exception):
+    def __init__(self, apple_id: str):
+        self.apple_id = apple_id
+        super().__init__(f"2FA required for {apple_id}")
+
+
+class TooManyAttemptsError(Exception):
+    def __init__(self, apple_id: str):
+        self.apple_id = apple_id
+        super().__init__(f"too many 2FA attempts for {apple_id}")
+```
+
+In `python-findmy-service/app/icloud_client.py`, add near the top (after
+the existing imports) and change `submit_2fa`:
+
+```python
+import time
+
+MAX_2FA_ATTEMPTS = 5
+TWO_FA_LOCKOUT_WINDOW_SECONDS = 15 * 60
+_failed_2fa_attempts: dict[str, list[float]] = {}
+
+
+def _recent_2fa_failures(apple_id: str) -> list[float]:
+    now = time.time()
+    recent = [t for t in _failed_2fa_attempts.get(apple_id, []) if now - t < TWO_FA_LOCKOUT_WINDOW_SECONDS]
+    _failed_2fa_attempts[apple_id] = recent
+    return recent
+
+
+def submit_2fa(apple_id: str, code: str) -> bool:
+    if len(_recent_2fa_failures(apple_id)) >= MAX_2FA_ATTEMPTS:
+        raise TooManyAttemptsError(apple_id)
+    try:
+        api = PyiCloudService(apple_id, cookie_directory=cookie_directory_for(apple_id))
+    except PyiCloudFailedLoginException as exc:
+        raise InvalidCredentialsError(str(exc)) from exc
+    if not api.validate_2fa_code(code):
+        _failed_2fa_attempts.setdefault(apple_id, []).append(time.time())
+        return False
+    _failed_2fa_attempts.pop(apple_id, None)
+    api.trust_session()
+    return True
+```
+
+Update the import line at the top of `icloud_client.py` to also import
+`TooManyAttemptsError`:
+
+```python
+from app.errors import InvalidCredentialsError, TooManyAttemptsError, TwoFactorRequiredError
+```
+
+In `python-findmy-service/app/routes/accounts.py`, catch the new
+exception in the 2fa route (the `TooManyAttemptsError` import was already
+added to this file's import line in Step 3):
+
+```python
+@router.post("/{apple_id}/2fa")
+def submit_2fa(apple_id: str, body: TwoFARequest):
+    try:
+        if not icloud_client.submit_2fa(apple_id, body.code):
+            raise HTTPException(status_code=400, detail="invalid code")
+    except InvalidCredentialsError:
+        raise HTTPException(status_code=401, detail="session expired or invalid credentials")
+    except TooManyAttemptsError:
+        raise HTTPException(status_code=429, detail="too many attempts, try again later")
+    return {"status": "active"}
+```
+
+- [ ] **Step 10: Run tests to verify they pass**
+
+Run: `cd python-findmy-service && pytest -v`
+Expected: PASS — full suite, including the 2 new rate-limit tests.
+
+- [ ] **Step 11: Commit**
+
+```bash
+git add python-findmy-service/app/errors.py python-findmy-service/app/icloud_client.py python-findmy-service/app/routes/accounts.py python-findmy-service/tests/test_icloud_client.py
+git commit -m "Rate-limit 2FA submission attempts per account"
+git push
+```
+
+- [ ] **Step 12: Lock down the docker-compose port binding**
+
+```yaml
+# docker-compose.yml (repo root)
+services:
+  python-findmy-service:
+    build: ./python-findmy-service
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - findmy_sessions:/data/sessions
+    environment:
+      - COOKIE_ROOT=/data/sessions
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in your shell or a .env file}
+
+volumes:
+  findmy_sessions:
+```
+
+Create a repo-root `.gitignore` (there is currently only one inside
+`python-findmy-service/`) so a local `.env` file holding the real
+`INTERNAL_SERVICE_TOKEN` secret is never committed:
+
+```
+# .gitignore (repo root)
+.env
+```
+
+- [ ] **Step 13: Verify the port binding and env-var requirement manually**
+
+```bash
+export INTERNAL_SERVICE_TOKEN=local-dev-token
+docker compose build python-findmy-service
+docker compose up -d python-findmy-service
+curl -s http://localhost:8000/health
+```
+Expected: `{"status":"ok"}` (localhost still works — `127.0.0.1:8000:8000`
+binds loopback only, which `curl http://localhost:8000` reaches fine).
+
+```bash
+docker compose down
+unset INTERNAL_SERVICE_TOKEN
+docker compose up python-findmy-service
+```
+Expected: compose refuses to start the container and prints the
+`set INTERNAL_SERVICE_TOKEN in your shell or a .env file` message from the
+`:?` interpolation — confirming the fail-closed behavior. Run
+`docker compose down` afterward regardless of outcome.
+
+- [ ] **Step 14: Commit**
+
+```bash
+git add docker-compose.yml .gitignore
+git commit -m "Bind python-findmy-service to localhost only, require INTERNAL_SERVICE_TOKEN"
+git push
+```
+
+---
+
 ## Done criteria
 
 `python-findmy-service` is complete when: `pytest` passes with every test
-from Tasks 2–6, the container builds and serves `/health` (Task 7), and
+from Tasks 2–8, the container builds and serves `/health` (Task 7), every
+route requires the internal token and 2FA is rate-limited (Task 8), and
 Task 1's spike has confirmed (and, if needed, corrected) the `fmf`
 response shape the Task 4 fixture and parser assume. At that point the
 next plan (spring-bff) can be written against the confirmed
 `POST /accounts/login`, `POST /accounts/{apple_id}/2fa`,
-`POST /accounts/{apple_id}/people` contract.
+`POST /accounts/{apple_id}/people` contract — and spring-bff must send
+`X-Internal-Token: <the same INTERNAL_SERVICE_TOKEN>` on every call, or
+every request will be rejected with 401.

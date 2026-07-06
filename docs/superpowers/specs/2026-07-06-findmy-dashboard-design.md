@@ -23,12 +23,18 @@ cloud, not a local device).
 - Pull everyone who shares their location with that Apple ID via Find My's
   People/family-sharing feature: name, current location, last-seen time.
 - Store location history over time for each person (not just latest ping).
-- Evaluate alert rules server-side (arrived/left an area, no update in N
-  hours) since Apple's own app doesn't support custom alerting.
+- Evaluate alert rules server-side since Apple's own app doesn't support
+  custom alerting. v1 ships stale-update detection only (no location
+  update in N hours) — see Non-goals for what's deferred.
 - Single-user dashboard, run locally first, safe to tunnel later.
 
 ## Non-goals (v1)
 
+- Geofence-based alerts (arrived/left an area) — deferred. Needs its own
+  design pass (per-person area, global area, drawn on the map?) once
+  there's real location history to design the UX against; guessing at it
+  before that exists would be speculative. v1 alerting is stale-update
+  only.
 - Tracking the account's own devices (iPhone/Mac/AirTag/AirPods) — out of
   scope, this app is about people-sharing data only.
 - AirTag / offline-finding BLE network protocol — that's a different,
@@ -122,7 +128,12 @@ Responsibilities:
 ### spring-bff (Java, Spring Boot)
 
 The only service the frontend talks to. Responsibilities:
-- Dashboard auth: single-user login, JWT/session cookie.
+- Dashboard auth: HTTP Basic against a single fixed credential (username +
+  bcrypt hash, both from env vars) via Spring Security's
+  `InMemoryUserDetailsManager` — no login endpoint, no JWT, no session
+  table. Simpler than a session/JWT flow for a single hardcoded user, and
+  the frontend can attach the credential to every request itself rather
+  than managing a token lifecycle.
 - Orchestrates python-findmy-service calls (account registration, 2FA
   relay, on-demand refresh).
 - Scheduler (`@Scheduled`) polls python-findmy-service at a configurable

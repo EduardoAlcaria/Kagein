@@ -72,33 +72,38 @@ Three services, docker-compose, local-first:
 
 ```
 react-frontend  -->  spring-bff  -->  python-findmy-service
-                         |                    |
-                         v                    v
-                     Postgres (app schema)  Postgres (findmy_raw schema)
+                         |
+                         v
+                     Postgres (app schema)
 ```
+
+`python-findmy-service` is stateless (no database) — see below.
 
 ### python-findmy-service (Python)
 
-Thin wrapper around `pyicloud` plus the `fmf` friends client. Responsibilities:
+Thin, stateless wrapper around `pyicloud` plus the `fmf` friends client.
+Every call takes the Apple ID (+ password when (re)authenticating) from
+spring-bff — this service holds no account records of its own.
+Responsibilities:
 - Apple ID login via `pyicloud.PyiCloudService` (handles the web-session
   auth); 2FA via `requires_2fa` / `send_verification_code` /
   `validate_verification_code` (or `validate_2fa_code` for HSA2 accounts).
-- Persist `pyicloud`'s cookie jar + session file per account so re-runs
-  don't require re-authenticating (pyicloud already writes these to a
-  `cookie_directory` — point it at a path backed by a Docker volume).
+- Cookie/session persistence: construct `PyiCloudService` with
+  `cookie_directory` set to a path derived from `sha256(apple_id)` on a
+  Docker volume, so repeated calls for the same account reuse the
+  existing session instead of re-authenticating every time. This volume
+  holds the actual credential material and must never be exposed outside
+  the container.
 - Friends client: read the `fmf` entry from `PyiCloudService._webservices`
   after login, POST to `{fmf_root}/fmipservice/client/fmfWeb/initClient`,
   parse the friend list into `{id, name, latitude, longitude, timestamp,
   accuracy}`.
 - Internal REST API (not internet-facing, only spring-bff calls it):
-  - `POST /accounts` — start login (email+password)
-  - `POST /accounts/{id}/2fa` — submit 2FA code
-  - `GET /accounts/{id}/people` — list of people sharing location + latest
-    position/last-seen
-- Persists session/cookie files (sensitive) on a Docker volume, path
-  recorded in its own Postgres schema (`findmy_raw`) alongside account
-  metadata; the files themselves are the credential, so the volume must
-  not be exposed outside the container.
+  - `POST /accounts/login` — `{apple_id, password}` → start/resume login
+  - `POST /accounts/{apple_id}/2fa` — `{code}` → submit 2FA code
+  - `GET /accounts/{apple_id}/people` — list of people sharing location +
+    latest position/last-seen (re-authenticates from the cookie volume;
+    caller supplies password only if a fresh login is required)
 
 ### spring-bff (Java, Spring Boot)
 
@@ -123,24 +128,27 @@ The only service the frontend talks to. Responsibilities:
 
 ### Postgres
 
-Shared instance, two schemas:
-- `findmy_raw` — python-findmy-service: account metadata + session file
-  path/status (not the credential itself, which lives on the volume).
-- `app` — spring-bff: accounts (dashboard-level), people, location
-  history, alert rules, alert events.
+Single `app` schema, owned entirely by spring-bff: dashboard user, fm
+accounts (apple_id + encrypted password + status), people, location
+history, alert rules, alert events.
 
 ## Data flow
 
-1. User registers Apple ID in frontend → spring-bff → python-findmy-service
-   starts iCloud login via `pyicloud`.
+1. User registers Apple ID in frontend → spring-bff stores the account
+   (encrypted password) in its `app` schema → calls python-findmy-service
+   `POST /accounts/login` with `{apple_id, password}`.
 2. If Apple challenges with 2FA, python-findmy-service returns a
    "2fa-required" status; spring-bff relays it to the frontend, which
-   prompts for the code; code is submitted back through the same chain.
-3. On success, python-findmy-service persists the session (cookie jar +
-   session file) on its volume, recorded in `findmy_raw`.
-4. spring-bff's scheduler polls python-findmy-service for the people feed
-   on an interval, upserts into `app` schema, evaluates alert rules
-   against the delta.
+   prompts for the code; code is submitted to
+   `POST /accounts/{apple_id}/2fa`, and spring-bff updates the account's
+   status on success.
+3. On success, python-findmy-service's cookie volume now holds a valid
+   session for that `apple_id` — no further password needed until it
+   expires.
+4. spring-bff's scheduler polls `GET /accounts/{apple_id}/people` on an
+   interval, upserts into `app` schema, evaluates alert rules against the
+   delta. If python-findmy-service reports the session expired, spring-bff
+   retries the login using its stored (encrypted) password.
 5. Frontend queries spring-bff for current people state, history, and
    alerts; renders map via mapcn.
 

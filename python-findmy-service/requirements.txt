@@ -1,0 +1,5 @@
+fastapi==0.139.0
+uvicorn==0.50.0
+pyicloud==2.6.5
+pytest==9.1.1
+httpx==0.28.1

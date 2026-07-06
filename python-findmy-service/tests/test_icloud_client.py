@@ -59,6 +59,15 @@ def test_submit_2fa_invalid_code_does_not_trust(mock_service_cls, monkeypatch, t
     mock_api.trust_session.assert_not_called()
 
 
+@patch("app.icloud_client.PyiCloudService")
+def test_submit_2fa_raises_invalid_credentials(mock_service_cls, monkeypatch, tmp_path):
+    monkeypatch.setenv("COOKIE_ROOT", str(tmp_path))
+    mock_service_cls.side_effect = PyiCloudFailedLoginException("session expired")
+
+    with pytest.raises(InvalidCredentialsError):
+        icloud_client.submit_2fa("user@example.com", "123456")
+
+
 @patch("app.icloud_client.fetch_people")
 @patch("app.icloud_client.PyiCloudService")
 def test_get_people_raises_when_2fa_pending(mock_service_cls, mock_fetch, monkeypatch, tmp_path):

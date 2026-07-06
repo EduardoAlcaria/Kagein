@@ -106,6 +106,18 @@ Responsibilities:
     POST with an optional `{"password": ...}` body only if a fresh login
     is required — kept out of the URL/query string so it never lands in
     access logs)
+- Every request must carry a shared internal secret
+  (`X-Internal-Token` header, checked against the `INTERNAL_SERVICE_TOKEN`
+  env var) or gets rejected with 401 before touching `icloud_client` —
+  this service has no per-account auth of its own (single-user design, no
+  multi-tenant model), so the token's only job is proving the caller is
+  spring-bff and not anything else reachable on the Docker network or,
+  if the port is ever accidentally published, the host/LAN. Fails closed:
+  if the env var isn't set, every request is rejected.
+- 2FA submission is rate-limited per `apple_id` (in-memory, fixed window —
+  e.g. 5 failed attempts / 15 minutes → 429) since it's a 6-digit code
+  (10^6 space) behind an unauthenticated-by-anyone-on-the-network endpoint
+  otherwise.
 
 ### spring-bff (Java, Spring Boot)
 
@@ -165,11 +177,20 @@ history, alert rules, alert events.
   instead of silently failing polls.
 - Missing/partial friend data in a single poll (friend hasn't shared
   recently) → keep last-known location, don't treat as an error.
+- Missing/wrong internal token → 401, logged as a potential misconfigured
+  caller (or worse, an unexpected caller) — not silently ignored.
+- Too many failed 2FA attempts for an account → 429 until the lockout
+  window clears.
 
 ## Deployment
 
 - docker-compose bundles four containers (frontend, bff, python service,
   postgres) for local run on the Mac mini.
+- `python-findmy-service`'s port is never published to `0.0.0.0` on the
+  host — only bound to `127.0.0.1` for local dev/smoke-testing from the
+  Mac mini itself, and reachable to `spring-bff` purely over the
+  docker-compose internal network by service name. It has no business
+  being reachable from the LAN, let alone the internet.
 - Later: front a tunnel (Cloudflare Tunnel or Tailscale funnel) only at
   spring-bff + react-frontend. python-findmy-service and Postgres stay
   internal, never directly exposed.

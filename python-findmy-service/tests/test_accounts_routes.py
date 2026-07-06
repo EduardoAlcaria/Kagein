@@ -44,3 +44,12 @@ def test_submit_2fa_invalid_code(mock_submit):
     response = client.post("/accounts/user@example.com/2fa", json={"code": "000000"})
 
     assert response.status_code == 400
+
+
+@patch("app.routes.accounts.icloud_client.submit_2fa")
+def test_submit_2fa_invalid_credentials(mock_submit):
+    mock_submit.side_effect = InvalidCredentialsError("session expired")
+
+    response = client.post("/accounts/user@example.com/2fa", json={"code": "123456"})
+
+    assert response.status_code == 401

@@ -1,0 +1,20 @@
+{
+  "locations": [
+    {
+      "id": "friend-1",
+      "location": {
+        "latitude": 37.3329141300381,
+        "longitude": -122.00520223179473,
+        "timestamp": 1586034872142
+      }
+    },
+    {
+      "id": "friend-2",
+      "location": null
+    }
+  ],
+  "contactDetails": [
+    {"id": "friend-1", "firstName": "Jane", "lastName": "Doe"},
+    {"id": "friend-2", "firstName": "John", "lastName": "Smith"}
+  ]
+}

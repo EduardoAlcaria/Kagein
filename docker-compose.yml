@@ -1,0 +1,12 @@
+services:
+  python-findmy-service:
+    build: ./python-findmy-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - findmy_sessions:/data/sessions
+    environment:
+      - COOKIE_ROOT=/data/sessions
+
+volumes:
+  findmy_sessions:

@@ -18,7 +18,10 @@ def login(apple_id: str, password: str) -> str:
 
 
 def submit_2fa(apple_id: str, code: str) -> bool:
-    api = PyiCloudService(apple_id, cookie_directory=cookie_directory_for(apple_id))
+    try:
+        api = PyiCloudService(apple_id, cookie_directory=cookie_directory_for(apple_id))
+    except PyiCloudFailedLoginException as exc:
+        raise InvalidCredentialsError(str(exc)) from exc
     if not api.validate_2fa_code(code):
         return False
     api.trust_session()

@@ -23,7 +23,9 @@ def parse_people(data: dict) -> list[Person]:
         person_id = entry["id"]
         location = entry.get("location") or {}
         contact = contacts_by_id.get(person_id, {})
-        name = f"{contact.get('firstName', '')} {contact.get('lastName', '')}".strip()
+        first_name = contact.get('firstName') or ''
+        last_name = contact.get('lastName') or ''
+        name = f"{first_name} {last_name}".strip()
         people.append(
             Person(
                 id=person_id,

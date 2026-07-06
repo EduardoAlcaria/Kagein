@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: spring-bff
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/findmy}
+    username: ${SPRING_DATASOURCE_USERNAME:findmy}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+server:
+  port: 8080

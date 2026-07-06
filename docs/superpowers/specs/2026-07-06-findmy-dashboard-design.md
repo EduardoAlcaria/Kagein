@@ -101,9 +101,11 @@ Responsibilities:
 - Internal REST API (not internet-facing, only spring-bff calls it):
   - `POST /accounts/login` — `{apple_id, password}` → start/resume login
   - `POST /accounts/{apple_id}/2fa` — `{code}` → submit 2FA code
-  - `GET /accounts/{apple_id}/people` — list of people sharing location +
+  - `POST /accounts/{apple_id}/people` — list of people sharing location +
     latest position/last-seen (re-authenticates from the cookie volume;
-    caller supplies password only if a fresh login is required)
+    POST with an optional `{"password": ...}` body only if a fresh login
+    is required — kept out of the URL/query string so it never lands in
+    access logs)
 
 ### spring-bff (Java, Spring Boot)
 

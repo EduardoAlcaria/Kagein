@@ -238,12 +238,47 @@ server:
 # spring-bff/.gitignore
 target/
 *.class
-.mvn/
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+**Note:** don't gitignore `.mvn/` — that directory holds the Maven
+Wrapper files added in the next step, which must be committed so anyone
+who clones this repo can build without a system-wide Maven install.
 
-Run: `cd spring-bff && mvn -q test`
+- [ ] **Step 4: Add the Maven Wrapper**
+
+Maven is not assumed to be installed on the machine running this plan —
+only a JDK. The Maven Wrapper (`./mvnw`) bootstraps its own Maven
+distribution on first run, so every command in this plan uses `./mvnw`,
+never a bare `mvn`.
+
+```
+# spring-bff/.mvn/wrapper/maven-wrapper.properties
+wrapperVersion=3.3.4
+distributionType=only-script
+distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.zip
+```
+
+Fetch the two wrapper launcher scripts verbatim from the Apache Maven
+Wrapper project (these are static, versioned files — do not hand-write
+them):
+
+```bash
+mkdir -p spring-bff/.mvn/wrapper
+curl -sL -o spring-bff/mvnw https://raw.githubusercontent.com/apache/maven-wrapper/master/maven-wrapper-distribution/src/resources/mvnw
+curl -sL -o spring-bff/mvnw.cmd https://raw.githubusercontent.com/apache/maven-wrapper/master/maven-wrapper-distribution/src/resources/mvnw.cmd
+sed -i 's/@@project\.version@@/3.3.4/g' spring-bff/mvnw spring-bff/mvnw.cmd
+chmod +x spring-bff/mvnw
+```
+
+The two `curl`-fetched files contain an unsubstituted `@@project.version@@`
+placeholder (a build-time token from the source template) — the `sed`
+step above replaces it with the concrete wrapper version `3.3.4`,
+matching `maven-wrapper.properties`. Skipping that `sed` step leaves a
+broken script that references a nonexistent `maven-wrapper-@@project.version@@.jar`.
+
+- [ ] **Step 5: Run the test to verify it passes**
+
+Run: `cd spring-bff && ./mvnw -q test`
 Expected: `BUILD SUCCESS`, `SpringBffApplicationTests` green — Testcontainers pulls
 `postgres:17-alpine`, Spring Boot auto-wires the `DataSource` to it via
 `@ServiceConnection`, and the connection validates. (First run downloads
@@ -255,7 +290,7 @@ If you hit `ConnectionDetailsFactoryNotFoundException`, the `name =
 Spring Boot 4 — do not drop it even though older Spring Boot 3.x examples
 you might find online omit it.
 
-- [ ] **Step 5: Add Postgres to the root docker-compose.yml**
+- [ ] **Step 6: Add Postgres to the root docker-compose.yml**
 
 ```yaml
 # docker-compose.yml (repo root) — add this service and volume entry;
@@ -276,10 +311,10 @@ you might find online omit it.
 Add `postgres_data:` alongside the existing `findmy_sessions:` entry under
 the top-level `volumes:` key.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add spring-bff/pom.xml spring-bff/src/main/java/com/kagein/springbff/SpringBffApplication.java spring-bff/src/main/resources/application.yml spring-bff/src/test/java/com/kagein/springbff/SpringBffApplicationTests.java spring-bff/.gitignore docker-compose.yml
+git add spring-bff/pom.xml spring-bff/src/main/java/com/kagein/springbff/SpringBffApplication.java spring-bff/src/main/resources/application.yml spring-bff/src/test/java/com/kagein/springbff/SpringBffApplicationTests.java spring-bff/.gitignore spring-bff/.mvn spring-bff/mvnw spring-bff/mvnw.cmd docker-compose.yml
 git commit -m "Scaffold spring-bff with verified Postgres connectivity"
 git push
 ```
@@ -358,7 +393,7 @@ class FmAccountRepositoryTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd spring-bff && mvn -q test -Dtest=FmAccountRepositoryTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=FmAccountRepositoryTest`
 Expected: FAIL — compilation error, `com.kagein.springbff.domain.FmAccount`
 and `FmAccountRepository` don't exist yet.
 
@@ -619,12 +654,12 @@ public interface AlertEventRepository extends JpaRepository<AlertEvent, Long> {
 
 - [ ] **Step 6: Run test to verify it passes**
 
-Run: `cd spring-bff && mvn -q test -Dtest=FmAccountRepositoryTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=FmAccountRepositoryTest`
 Expected: PASS
 
 - [ ] **Step 7: Run the full test suite**
 
-Run: `cd spring-bff && mvn -q test`
+Run: `cd spring-bff && ./mvnw -q test`
 Expected: `BUILD SUCCESS`, both test classes pass.
 
 - [ ] **Step 8: Commit**
@@ -705,7 +740,7 @@ class SecurityConfigTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd spring-bff && mvn -q test -Dtest=SecurityConfigTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=SecurityConfigTest`
 Expected: FAIL — with no `SecurityFilterChain` bean, Spring Security's
 default auto-configuration generates a random password logged at startup
 and protects everything, including `/actuator/health` (so
@@ -768,12 +803,12 @@ dashboard:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd spring-bff && mvn -q test -Dtest=SecurityConfigTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=SecurityConfigTest`
 Expected: PASS (4 tests)
 
 - [ ] **Step 5: Run the full suite**
 
-Run: `cd spring-bff && mvn -q test`
+Run: `cd spring-bff && ./mvnw -q test`
 Expected: `BUILD SUCCESS`
 
 - [ ] **Step 6: Commit**
@@ -890,7 +925,7 @@ class PythonFindMyClientTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd spring-bff && mvn -q test -Dtest=PythonFindMyClientTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=PythonFindMyClientTest`
 Expected: FAIL — `PythonFindMyClient`, `PersonDto`, `PythonFindMyException`
 don't exist yet.
 
@@ -1018,12 +1053,12 @@ python-findmy-service:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd spring-bff && mvn -q test -Dtest=PythonFindMyClientTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=PythonFindMyClientTest`
 Expected: PASS (3 tests)
 
 - [ ] **Step 5: Run the full suite**
 
-Run: `cd spring-bff && mvn -q test`
+Run: `cd spring-bff && ./mvnw -q test`
 Expected: `BUILD SUCCESS`
 
 - [ ] **Step 6: Commit**
@@ -1096,7 +1131,7 @@ class CredentialCipherTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd spring-bff && mvn -q test -Dtest=CredentialCipherTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=CredentialCipherTest`
 Expected: FAIL — `CredentialCipher` doesn't exist yet.
 
 - [ ] **Step 3: Implement CredentialCipher**
@@ -1168,7 +1203,7 @@ credential:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd spring-bff && mvn -q test -Dtest=CredentialCipherTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=CredentialCipherTest`
 Expected: PASS (2 tests)
 
 - [ ] **Step 5: Write the failing tests for AccountController**
@@ -1279,7 +1314,7 @@ class AccountControllerTest {
 
 - [ ] **Step 6: Run test to verify it fails**
 
-Run: `cd spring-bff && mvn -q test -Dtest=AccountControllerTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=AccountControllerTest`
 Expected: FAIL — `AccountController`, `RegisterAccountRequest`,
 `TwoFaRequest` don't exist yet.
 
@@ -1363,12 +1398,12 @@ public class AccountController {
 
 - [ ] **Step 8: Run test to verify it passes**
 
-Run: `cd spring-bff && mvn -q test -Dtest=AccountControllerTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=AccountControllerTest`
 Expected: PASS (3 tests)
 
 - [ ] **Step 9: Run the full suite**
 
-Run: `cd spring-bff && mvn -q test`
+Run: `cd spring-bff && ./mvnw -q test`
 Expected: `BUILD SUCCESS`
 
 - [ ] **Step 10: Commit**
@@ -1487,7 +1522,7 @@ class PollingServiceTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd spring-bff && mvn -q test -Dtest=PollingServiceTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=PollingServiceTest`
 Expected: FAIL — `PollingService` doesn't exist yet.
 
 - [ ] **Step 3: Implement**
@@ -1572,12 +1607,12 @@ polling:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd spring-bff && mvn -q test -Dtest=PollingServiceTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=PollingServiceTest`
 Expected: PASS (3 tests)
 
 - [ ] **Step 5: Run the full suite**
 
-Run: `cd spring-bff && mvn -q test`
+Run: `cd spring-bff && ./mvnw -q test`
 Expected: `BUILD SUCCESS`
 
 - [ ] **Step 6: Commit**
@@ -1706,7 +1741,7 @@ class StaleUpdateAlertServiceTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd spring-bff && mvn -q test -Dtest=StaleUpdateAlertServiceTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=StaleUpdateAlertServiceTest`
 Expected: FAIL — `StaleUpdateAlertService` doesn't exist yet.
 
 - [ ] **Step 3: Implement StaleUpdateAlertService**
@@ -1780,7 +1815,7 @@ alert:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd spring-bff && mvn -q test -Dtest=StaleUpdateAlertServiceTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=StaleUpdateAlertServiceTest`
 Expected: PASS (3 tests)
 
 - [ ] **Step 5: Wire the alert check into PollingService**
@@ -1876,7 +1911,7 @@ constructor injection — no other change needed in that test file).
 
 - [ ] **Step 6: Run the polling tests to confirm nothing broke**
 
-Run: `cd spring-bff && mvn -q test -Dtest=PollingServiceTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=PollingServiceTest`
 Expected: PASS (3 tests, unchanged assertions — the new collaborator is
 just an unverified mock in these three tests since they don't assert
 alert behavior)
@@ -1937,7 +1972,7 @@ class AlertControllerTest {
 
 - [ ] **Step 8: Run test to verify it fails**
 
-Run: `cd spring-bff && mvn -q test -Dtest=AlertControllerTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=AlertControllerTest`
 Expected: FAIL — `AlertController`, `AlertEventDto` don't exist yet.
 
 - [ ] **Step 9: Implement**
@@ -1986,12 +2021,12 @@ public class AlertController {
 
 - [ ] **Step 10: Run test to verify it passes**
 
-Run: `cd spring-bff && mvn -q test -Dtest=AlertControllerTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=AlertControllerTest`
 Expected: PASS
 
 - [ ] **Step 11: Run the full suite**
 
-Run: `cd spring-bff && mvn -q test`
+Run: `cd spring-bff && ./mvnw -q test`
 Expected: `BUILD SUCCESS`
 
 - [ ] **Step 12: Commit**
@@ -2094,7 +2129,7 @@ class PeopleControllerTest {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd spring-bff && mvn -q test -Dtest=PeopleControllerTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=PeopleControllerTest`
 Expected: FAIL — `PeopleController`, `PersonSummaryDto`, `PersonLocationDto`
 don't exist yet.
 
@@ -2171,12 +2206,12 @@ public class PeopleController {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd spring-bff && mvn -q test -Dtest=PeopleControllerTest`
+Run: `cd spring-bff && ./mvnw -q test -Dtest=PeopleControllerTest`
 Expected: PASS (2 tests)
 
 - [ ] **Step 5: Run the full suite**
 
-Run: `cd spring-bff && mvn -q test`
+Run: `cd spring-bff && ./mvnw -q test`
 Expected: `BUILD SUCCESS` — every task's tests, including Task 1's
 Testcontainers-backed ones.
 
@@ -2262,7 +2297,7 @@ git push
 
 ## Done criteria
 
-`spring-bff` is complete when: `mvn test` passes with every test from
+`spring-bff` is complete when: `./mvnw test` passes with every test from
 Tasks 1-8 (including the Testcontainers-backed ones, which require Docker
 to be running locally), the container builds and serves
 `/actuator/health` and `/api/people` against a real Postgres instance in

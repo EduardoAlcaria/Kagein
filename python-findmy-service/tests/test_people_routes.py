@@ -15,7 +15,11 @@ def test_list_people_returns_people(mock_get_people):
         Person(id="friend-1", name="Jane Doe", latitude=37.33, longitude=-122.0, timestamp_ms=1586034872142)
     ]
 
-    response = client.post("/accounts/user@example.com/people", json={})
+    response = client.post(
+        "/accounts/user@example.com/people",
+        json={},
+        headers={"X-Internal-Token": "test-token"},
+    )
 
     assert response.status_code == 200
     assert response.json()[0]["name"] == "Jane Doe"
@@ -25,7 +29,11 @@ def test_list_people_returns_people(mock_get_people):
 def test_list_people_2fa_required(mock_get_people):
     mock_get_people.side_effect = TwoFactorRequiredError("user@example.com")
 
-    response = client.post("/accounts/user@example.com/people", json={})
+    response = client.post(
+        "/accounts/user@example.com/people",
+        json={},
+        headers={"X-Internal-Token": "test-token"},
+    )
 
     assert response.status_code == 409
 
@@ -34,6 +42,10 @@ def test_list_people_2fa_required(mock_get_people):
 def test_list_people_expired_session(mock_get_people):
     mock_get_people.side_effect = InvalidCredentialsError("session expired")
 
-    response = client.post("/accounts/user@example.com/people", json={})
+    response = client.post(
+        "/accounts/user@example.com/people",
+        json={},
+        headers={"X-Internal-Token": "test-token"},
+    )
 
     assert response.status_code == 401

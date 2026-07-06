@@ -1,12 +1,13 @@
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app import icloud_client
 from app.errors import InvalidCredentialsError, TwoFactorRequiredError
+from app.security import require_internal_token
 
-router = APIRouter(prefix="/accounts", tags=["people"])
+router = APIRouter(prefix="/accounts", tags=["people"], dependencies=[Depends(require_internal_token)])
 
 
 class PeopleRequest(BaseModel):

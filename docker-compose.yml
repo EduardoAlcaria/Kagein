@@ -2,11 +2,12 @@ services:
   python-findmy-service:
     build: ./python-findmy-service
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - findmy_sessions:/data/sessions
     environment:
       - COOKIE_ROOT=/data/sessions
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in your shell or a .env file}
 
 volumes:
   findmy_sessions:

@@ -24,5 +24,8 @@ python-findmy-service:
   base-url: ${PYTHON_FINDMY_SERVICE_URL:http://python-findmy-service:8000}
   internal-token: ${INTERNAL_SERVICE_TOKEN:}
 
+credential:
+  encryption-key: ${CREDENTIAL_ENCRYPTION_KEY:}
+
 server:
   port: 8080

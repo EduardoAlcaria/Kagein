@@ -1,5 +1,6 @@
 package com.kagein.springbff.poll;
 
+import com.kagein.springbff.alert.StaleUpdateAlertService;
 import com.kagein.springbff.client.PersonDto;
 import com.kagein.springbff.client.PythonFindMyClient;
 import com.kagein.springbff.domain.AccountStatus;
@@ -27,18 +28,21 @@ public class PollingService {
     private final FmAccountRepository fmAccountRepository;
     private final PersonRepository personRepository;
     private final PersonLocationRepository personLocationRepository;
+    private final StaleUpdateAlertService staleUpdateAlertService;
 
     public PollingService(
             PythonFindMyClient pythonFindMyClient,
             CredentialCipher credentialCipher,
             FmAccountRepository fmAccountRepository,
             PersonRepository personRepository,
-            PersonLocationRepository personLocationRepository) {
+            PersonLocationRepository personLocationRepository,
+            StaleUpdateAlertService staleUpdateAlertService) {
         this.pythonFindMyClient = pythonFindMyClient;
         this.credentialCipher = credentialCipher;
         this.fmAccountRepository = fmAccountRepository;
         this.personRepository = personRepository;
         this.personLocationRepository = personLocationRepository;
+        this.staleUpdateAlertService = staleUpdateAlertService;
     }
 
     @Scheduled(fixedDelayString = "${polling.interval-ms:60000}")
@@ -71,6 +75,7 @@ public class PollingService {
                                 : Instant.now())
                         .build());
             }
+            staleUpdateAlertService.checkPerson(person);
         }
     }
 }

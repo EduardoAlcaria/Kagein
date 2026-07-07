@@ -11,3 +11,9 @@ dashboard:
 python-findmy-service:
   base-url: http://python-findmy-service:8000
   internal-token: test-token
+
+# CredentialCipher is a @Component with a required @Value; any test that boots the
+# full context (SpringBffApplicationTests, SecurityConfigTest) needs a valid 32-byte
+# base64 key here or the SecretKeySpec constructor throws on an empty decoded array.
+credential:
+  encryption-key: MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=

@@ -30,5 +30,8 @@ credential:
 polling:
   interval-ms: ${POLLING_INTERVAL_MS:60000}
 
+alert:
+  stale-threshold-hours: ${ALERT_STALE_THRESHOLD_HOURS:6}
+
 server:
   port: 8080

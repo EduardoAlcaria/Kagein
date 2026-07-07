@@ -103,6 +103,13 @@ class SpringBffApplicationTests {
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
+            <!-- Spring Boot 4.x split RestClientAutoConfiguration out of the core
+                 autoconfigure jar into this starter — without it there's no
+                 RestClient.Builder bean to @Autowired (needed by Task 4). -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
@@ -1022,8 +1029,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -1059,8 +1064,11 @@ public class PythonFindMyClient {
 
     public void submit2fa(String appleId, String code) {
         try {
+            // RestClient.uri(template, vars) already percent-encodes template
+            // variables itself — pre-encoding appleId here would double-encode
+            // the "@" in every real Apple ID (e.g. "%40" -> "%2540").
             restClient.post()
-                    .uri("/accounts/{appleId}/2fa", encode(appleId))
+                    .uri("/accounts/{appleId}/2fa", appleId)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of("code", code))
                     .retrieve()
@@ -1074,7 +1082,7 @@ public class PythonFindMyClient {
         try {
             Map<String, Object> body = password == null ? Map.of() : Map.of("password", password);
             PersonDto[] people = restClient.post()
-                    .uri("/accounts/{appleId}/people", encode(appleId))
+                    .uri("/accounts/{appleId}/people", appleId)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
@@ -1083,10 +1091,6 @@ public class PythonFindMyClient {
         } catch (RestClientResponseException e) {
             throw new PythonFindMyException(e.getStatusCode().value(), e.getMessage());
         }
-    }
-
-    private static String encode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }
 ```

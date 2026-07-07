@@ -1,5 +1,6 @@
 package com.kagein.springbff.poll;
 
+import com.kagein.springbff.alert.StaleUpdateAlertService;
 import com.kagein.springbff.client.PersonDto;
 import com.kagein.springbff.client.PythonFindMyClient;
 import com.kagein.springbff.domain.*;
@@ -25,6 +26,7 @@ class PollingServiceTest {
     @Mock private FmAccountRepository fmAccountRepository;
     @Mock private PersonRepository personRepository;
     @Mock private PersonLocationRepository personLocationRepository;
+    @Mock private StaleUpdateAlertService staleUpdateAlertService;
 
     @InjectMocks
     private PollingService pollingService;

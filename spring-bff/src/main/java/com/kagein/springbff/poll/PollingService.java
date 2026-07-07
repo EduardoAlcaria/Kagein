@@ -10,6 +10,8 @@ import com.kagein.springbff.repository.FmAccountRepository;
 import com.kagein.springbff.repository.PersonLocationRepository;
 import com.kagein.springbff.repository.PersonRepository;
 import com.kagein.springbff.security.CredentialCipher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,8 @@ import java.time.Instant;
 
 @Service
 public class PollingService {
+
+    private static final Logger log = LoggerFactory.getLogger(PollingService.class);
 
     private final PythonFindMyClient pythonFindMyClient;
     private final CredentialCipher credentialCipher;
@@ -40,7 +44,11 @@ public class PollingService {
     @Scheduled(fixedDelayString = "${polling.interval-ms:60000}")
     public void pollAllActiveAccounts() {
         for (FmAccount account : fmAccountRepository.findByStatus(AccountStatus.ACTIVE)) {
-            pollAccount(account);
+            try {
+                pollAccount(account);
+            } catch (Exception e) {
+                log.error("Poll failed for account {}", account.getAppleId(), e);
+            }
         }
     }
 

@@ -16,5 +16,9 @@ management:
       exposure:
         include: health
 
+dashboard:
+  username: ${DASHBOARD_USERNAME:}
+  password-hash: ${DASHBOARD_PASSWORD_HASH:}
+
 server:
   port: 8080

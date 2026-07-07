@@ -82,4 +82,24 @@ class PollingServiceTest {
 
         verify(pythonFindMyClient).getPeople("a@example.com", "hunter2");
     }
+
+    @Test
+    void pollAllActiveAccountsContinuesAfterOneAccountFails() {
+        FmAccount accountA = FmAccount.builder()
+                .id(1L).appleId("a@example.com").encryptedPassword("encA")
+                .status(AccountStatus.ACTIVE).build();
+        FmAccount accountB = FmAccount.builder()
+                .id(2L).appleId("b@example.com").encryptedPassword("encB")
+                .status(AccountStatus.ACTIVE).build();
+        when(fmAccountRepository.findByStatus(AccountStatus.ACTIVE)).thenReturn(List.of(accountA, accountB));
+        when(credentialCipher.decrypt("encA")).thenReturn("passA");
+        when(credentialCipher.decrypt("encB")).thenReturn("passB");
+        when(pythonFindMyClient.getPeople("a@example.com", "passA"))
+                .thenThrow(new RuntimeException("network blip"));
+        when(pythonFindMyClient.getPeople("b@example.com", "passB")).thenReturn(List.of());
+
+        pollingService.pollAllActiveAccounts();
+
+        verify(pythonFindMyClient).getPeople("b@example.com", "passB");
+    }
 }

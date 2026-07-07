@@ -145,6 +145,12 @@ class SpringBffApplicationTests {
             <scope>test</scope>
         </dependency>
         <dependency>
+            <!-- Same Spring Boot 4.x split as above, but for @AutoConfigureMockMvc. -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
@@ -711,23 +717,36 @@ package com.kagein.springbff.security;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "dashboard.username=admin",
         // bcrypt hash of "hunter2", generated for this test only
-        "dashboard.password-hash=$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5L4pMlNqzcbtsLYgZFgB0LDgkaZzq"
+        "dashboard.password-hash=$2b$12$VpWzC70E7trgMpdIAIkigec3g4mw3/ranR5b42nXnhEK0raSjE5Tm"
 })
 class SecurityConfigTest {
+
+    // This test boots the full app context, which includes the JPA/Flyway
+    // wiring from Task 2 — like every other @SpringBootTest in this
+    // project, it needs a real Postgres via Testcontainers, not just a
+    // MockMvc slice.
+    @Container
+    @ServiceConnection(name = "postgresql")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
 
     @Autowired
     private MockMvc mockMvc;
@@ -781,11 +800,23 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 public class SecurityConfig {
+
+    // ponytail: a bare bcrypt hash (no "{bcrypt}" prefix) doesn't route
+    // through Spring Security's default DelegatingPasswordEncoder, which
+    // throws "no PasswordEncoder mapped for the id \"null\"" at match
+    // time — registering BCryptPasswordEncoder directly is the minimal
+    // fix, not a speculative addition.
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
     @Bean
     public UserDetailsService userDetailsService(
@@ -816,11 +847,6 @@ dashboard:
   username: ${DASHBOARD_USERNAME:}
   password-hash: ${DASHBOARD_PASSWORD_HASH:}
 ```
-
-`InMemoryUserDetailsManager` handles bcrypt comparison against
-`password-hash` automatically via Spring Security's default
-`DelegatingPasswordEncoder` (bcrypt is its default scheme) — no separate
-`PasswordEncoder` bean is needed for this to work correctly.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -1241,12 +1267,16 @@ import com.kagein.springbff.security.CredentialCipher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Optional;
 
@@ -1256,22 +1286,27 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "dashboard.username=admin",
-        "dashboard.password-hash=$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5L4pMlNqzcbtsLYgZFgB0LDgkaZzq",
+        "dashboard.password-hash=$2b$12$VpWzC70E7trgMpdIAIkigec3g4mw3/ranR5b42nXnhEK0raSjE5Tm",
         "credential.encryption-key=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
 })
 class AccountControllerTest {
 
+    @Container
+    @ServiceConnection(name = "postgresql")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
+
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private PythonFindMyClient pythonFindMyClient;
 
-    @MockBean
+    @MockitoBean
     private FmAccountRepository fmAccountRepository;
 
     @Autowired
@@ -1947,11 +1982,15 @@ import com.kagein.springbff.domain.AlertEvent;
 import com.kagein.springbff.repository.AlertEventRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
 import java.util.List;
@@ -1961,19 +2000,24 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "dashboard.username=admin",
-        "dashboard.password-hash=$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5L4pMlNqzcbtsLYgZFgB0LDgkaZzq",
+        "dashboard.password-hash=$2b$12$VpWzC70E7trgMpdIAIkigec3g4mw3/ranR5b42nXnhEK0raSjE5Tm",
         "credential.encryption-key=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
 })
 class AlertControllerTest {
 
+    @Container
+    @ServiceConnection(name = "postgresql")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
+
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private AlertEventRepository alertEventRepository;
 
     @Test
@@ -2086,11 +2130,15 @@ import com.kagein.springbff.repository.PersonLocationRepository;
 import com.kagein.springbff.repository.PersonRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
 import java.util.List;
@@ -2100,22 +2148,27 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "dashboard.username=admin",
-        "dashboard.password-hash=$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5L4pMlNqzcbtsLYgZFgB0LDgkaZzq",
+        "dashboard.password-hash=$2b$12$VpWzC70E7trgMpdIAIkigec3g4mw3/ranR5b42nXnhEK0raSjE5Tm",
         "credential.encryption-key=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="
 })
 class PeopleControllerTest {
 
+    @Container
+    @ServiceConnection(name = "postgresql")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
+
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private PersonRepository personRepository;
 
-    @MockBean
+    @MockitoBean
     private PersonLocationRepository personLocationRepository;
 
     @Test

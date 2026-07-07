@@ -27,5 +27,8 @@ python-findmy-service:
 credential:
   encryption-key: ${CREDENTIAL_ENCRYPTION_KEY:}
 
+polling:
+  interval-ms: ${POLLING_INTERVAL_MS:60000}
+
 server:
   port: 8080

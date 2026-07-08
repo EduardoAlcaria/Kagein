@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { AlertEventDto } from '../api/types';
 
 const LAST_SEEN_KEY = 'findmy.lastSeenAlertId';
@@ -9,22 +9,21 @@ function getLastSeenId(): number {
 }
 
 export function AlertBanner({ alerts }: { alerts: AlertEventDto[] }) {
-  const [dismissed, setDismissed] = useState(false);
+  const [lastSeenId, setLastSeenId] = useState(getLastSeenId);
   const newestId = alerts.length > 0 ? Math.max(...alerts.map((alert) => alert.id)) : 0;
-  const hasNewAlert = !dismissed && newestId > getLastSeenId();
+  const hasNewAlert = newestId > lastSeenId;
 
-  useEffect(() => {
-    if (dismissed && newestId > 0) {
-      localStorage.setItem(LAST_SEEN_KEY, String(newestId));
-    }
-  }, [dismissed, newestId]);
+  function dismiss() {
+    localStorage.setItem(LAST_SEEN_KEY, String(newestId));
+    setLastSeenId(newestId);
+  }
 
   if (!hasNewAlert) return null;
 
   return (
-    <div className="flex items-center justify-between bg-amber-900/60 px-4 py-2 text-amber-200">
+    <div className="flex items-center justify-between bg-destructive px-4 py-2 text-destructive-foreground">
       <span>New alert: {alerts.find((alert) => alert.id === newestId)?.message}</span>
-      <button type="button" onClick={() => setDismissed(true)} className="font-semibold">
+      <button type="button" onClick={dismiss} className="font-semibold">
         Dismiss
       </button>
     </div>

@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import App from './App';
 
 describe('App', () => {
-  it('renders the dashboard heading', () => {
+  it('redirects unauthenticated visitors to the login page', () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: 'Find My Dashboard' })).toBeInTheDocument();
   });

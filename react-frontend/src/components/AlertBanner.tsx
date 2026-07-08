@@ -22,7 +22,7 @@ export function AlertBanner({ alerts }: { alerts: AlertEventDto[] }) {
   if (!hasNewAlert) return null;
 
   return (
-    <div className="flex items-center justify-between bg-amber-100 px-4 py-2 text-amber-900">
+    <div className="flex items-center justify-between bg-amber-900/60 px-4 py-2 text-amber-200">
       <span>New alert: {alerts.find((alert) => alert.id === newestId)?.message}</span>
       <button type="button" onClick={() => setDismissed(true)} className="font-semibold">
         Dismiss

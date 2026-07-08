@@ -20,6 +20,23 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
 
+  spring-bff:
+    build: ./spring-bff
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/findmy
+      - SPRING_DATASOURCE_USERNAME=findmy
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in your shell or a .env file}
+      - PYTHON_FINDMY_SERVICE_URL=http://python-findmy-service:8000
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?set INTERNAL_SERVICE_TOKEN in your shell or a .env file}
+      - DASHBOARD_USERNAME=${DASHBOARD_USERNAME:?set DASHBOARD_USERNAME in your shell or a .env file}
+      - DASHBOARD_PASSWORD_HASH=${DASHBOARD_PASSWORD_HASH:?set DASHBOARD_PASSWORD_HASH in your shell or a .env file}
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY:?set CREDENTIAL_ENCRYPTION_KEY in your shell or a .env file}
+    depends_on:
+      - postgres
+      - python-findmy-service
+
 volumes:
   findmy_sessions:
   postgres_data:

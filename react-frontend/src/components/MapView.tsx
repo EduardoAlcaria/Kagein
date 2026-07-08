@@ -4,7 +4,7 @@ import type { GeoJSONSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PersonLocationDto, PersonSummaryDto } from '../api/types';
 
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 const TRAIL_SOURCE_ID = 'person-trail';
 const TRAIL_LAYER_ID = 'person-trail-line';
 

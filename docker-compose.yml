@@ -37,6 +37,13 @@ services:
       - postgres
       - python-findmy-service
 
+  react-frontend:
+    build: ./react-frontend
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      - spring-bff
+
 volumes:
   findmy_sessions:
   postgres_data:

@@ -31,16 +31,23 @@ export function AccountSettingsForm() {
   if (status === '2fa_required') {
     return (
       <form onSubmit={handleTwoFactorSubmit} className="flex w-80 flex-col gap-4">
-        <p className="text-neutral-300">Enter the 2FA code sent to your Apple devices.</p>
+        <p className="text-muted-foreground">Enter the 2FA code sent to your Apple devices.</p>
         <input
           aria-label="2FA code"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100"
+          className="rounded-lg border border-input bg-card px-3 py-2 text-foreground"
         />
-        <button type="submit" className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-500">
-          Submit code
+        <button
+          type="submit"
+          disabled={twoFactorMutation.isPending}
+          className="rounded-lg bg-primary px-3 py-2 text-primary-foreground hover:opacity-90 disabled:opacity-50"
+        >
+          {twoFactorMutation.isPending ? 'Submitting...' : 'Submit code'}
         </button>
+        {twoFactorMutation.isError && (
+          <p className="text-destructive">Couldn't verify that code. Try again.</p>
+        )}
       </form>
     );
   }
@@ -51,7 +58,7 @@ export function AccountSettingsForm() {
         aria-label="Apple ID"
         value={appleId}
         onChange={(e) => setAppleId(e.target.value)}
-        className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder-neutral-500"
+        className="rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground"
         placeholder="Apple ID"
       />
       <input
@@ -59,13 +66,20 @@ export function AccountSettingsForm() {
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder-neutral-500"
+        className="rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground"
         placeholder="Password"
       />
-      <button type="submit" className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-500">
-        Add account
+      <button
+        type="submit"
+        disabled={registerMutation.isPending}
+        className="rounded-lg bg-primary px-3 py-2 text-primary-foreground hover:opacity-90 disabled:opacity-50"
+      >
+        {registerMutation.isPending ? 'Adding...' : 'Add account'}
       </button>
-      {status === 'active' && <p className="text-green-400">Account active.</p>}
+      {status === 'active' && <p className="text-primary">Account active.</p>}
+      {registerMutation.isError && (
+        <p className="text-destructive">Couldn't add that account. Check the Apple ID and password.</p>
+      )}
     </form>
   );
 }

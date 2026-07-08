@@ -16,18 +16,18 @@ interface PeopleSidebarProps {
 
 export function PeopleSidebar({ people, selectedPersonId, onSelectPerson }: PeopleSidebarProps) {
   return (
-    <ul className="flex w-64 flex-col gap-1 overflow-y-auto border-r p-2">
+    <ul className="flex w-64 flex-col gap-1 overflow-y-auto border-r border-neutral-800 bg-neutral-900 p-2">
       {people.map((person) => (
         <li key={person.id}>
           <button
             type="button"
             onClick={() => onSelectPerson(person.id)}
-            className={`w-full rounded px-3 py-2 text-left ${
-              person.id === selectedPersonId ? 'bg-blue-100' : 'hover:bg-gray-100'
+            className={`w-full rounded px-3 py-2 text-left text-neutral-100 ${
+              person.id === selectedPersonId ? 'bg-blue-900/50' : 'hover:bg-neutral-800'
             }`}
           >
             <div className="font-medium">{person.name}</div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-neutral-400">
               {person.latest ? relativeTime(person.latest.capturedAt) : 'no location yet'}
             </div>
           </button>

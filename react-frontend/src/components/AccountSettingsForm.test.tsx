@@ -25,4 +25,17 @@ describe('AccountSettingsForm', () => {
 
     expect(await screen.findByText('Account active.')).toBeInTheDocument();
   });
+
+  it('shows an error message when registration fails', async () => {
+    server.use(http.post('/api/accounts', () => new HttpResponse(null, { status: 401 })));
+
+    const user = userEvent.setup();
+    render(<AccountSettingsForm />, { wrapper: TestQueryProvider });
+
+    await user.type(screen.getByLabelText('Apple ID'), 'a@b.com');
+    await user.type(screen.getByLabelText('Apple ID password'), 'wrong');
+    await user.click(screen.getByRole('button', { name: 'Add account' }));
+
+    expect(await screen.findByText(/Couldn't add that account/)).toBeInTheDocument();
+  });
 });

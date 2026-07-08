@@ -56,4 +56,33 @@ describe('MapView', () => {
 
     expect(onSelectPerson).toHaveBeenCalledWith(1);
   });
+
+  it('adds a trail source when trail points are provided', () => {
+    render(
+      <MapView
+        people={people}
+        selectedPersonId={1}
+        onSelectPerson={vi.fn()}
+        trail={[
+          { latitude: 37.33, longitude: -122.0, capturedAt: '2026-07-06T12:00:00Z' },
+          { latitude: 37.34, longitude: -122.1, capturedAt: '2026-07-06T13:00:00Z' },
+        ]}
+      />,
+    );
+
+    expect(mapInstance.addSource).toHaveBeenCalledWith(
+      'person-trail',
+      expect.objectContaining({
+        type: 'geojson',
+        data: expect.objectContaining({
+          geometry: expect.objectContaining({
+            coordinates: [
+              [-122.0, 37.33],
+              [-122.1, 37.34],
+            ],
+          }),
+        }),
+      }),
+    );
+  });
 });

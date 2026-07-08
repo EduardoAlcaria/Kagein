@@ -31,14 +31,14 @@ export function AccountSettingsForm() {
   if (status === '2fa_required') {
     return (
       <form onSubmit={handleTwoFactorSubmit} className="flex w-80 flex-col gap-4">
-        <p>Enter the 2FA code sent to your Apple devices.</p>
+        <p className="text-neutral-300">Enter the 2FA code sent to your Apple devices.</p>
         <input
           aria-label="2FA code"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          className="rounded border px-3 py-2"
+          className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100"
         />
-        <button type="submit" className="rounded bg-blue-600 px-3 py-2 text-white">
+        <button type="submit" className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-500">
           Submit code
         </button>
       </form>
@@ -51,7 +51,7 @@ export function AccountSettingsForm() {
         aria-label="Apple ID"
         value={appleId}
         onChange={(e) => setAppleId(e.target.value)}
-        className="rounded border px-3 py-2"
+        className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder-neutral-500"
         placeholder="Apple ID"
       />
       <input
@@ -59,13 +59,13 @@ export function AccountSettingsForm() {
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="rounded border px-3 py-2"
+        className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder-neutral-500"
         placeholder="Password"
       />
-      <button type="submit" className="rounded bg-blue-600 px-3 py-2 text-white">
+      <button type="submit" className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-500">
         Add account
       </button>
-      {status === 'active' && <p className="text-green-700">Account active.</p>}
+      {status === 'active' && <p className="text-green-400">Account active.</p>}
     </form>
   );
 }

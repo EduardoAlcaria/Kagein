@@ -2059,6 +2059,359 @@ git add docker-compose.yml && git commit -m "Wire react-frontend service into do
 
 ---
 
+## Task 10: Dark theme by default (added post-review, per user feedback)
+
+**Files:**
+- Modify: `react-frontend/src/index.css`
+- Modify: `react-frontend/src/pages/LoginPage.tsx`
+- Modify: `react-frontend/src/pages/SettingsPage.tsx`
+- Modify: `react-frontend/src/pages/DashboardPage.tsx`
+- Modify: `react-frontend/src/components/PeopleSidebar.tsx`
+- Modify: `react-frontend/src/components/MapView.tsx`
+- Modify: `react-frontend/src/components/LocationHistoryList.tsx`
+- Modify: `react-frontend/src/components/AlertsPanel.tsx`
+- Modify: `react-frontend/src/components/AlertBanner.tsx`
+- Modify: `react-frontend/src/components/AccountSettingsForm.tsx`
+
+**Why:** User wants dark mode assumed by default (not a toggle — the only theme). This also fixes a real UX bug: `PeopleSidebar` and `AlertsPanel` had no background color, so on a white page they were visually indistinguishable from the map, making the map look like it filled the entire screen when in fact the sidebar/panel were just invisible against the white browser chrome.
+
+No test changes needed — existing tests query by role/label/text, not by className, so behavior is unchanged.
+
+- [ ] **Step 1: Apply the new file contents**
+
+```css
+/* react-frontend/src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #0a0a0a;
+  color: #e5e5e5;
+}
+```
+
+```tsx
+// react-frontend/src/pages/LoginPage.tsx
+import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+
+export function LoginPage() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    login({ username, password });
+    navigate('/', { replace: true });
+  }
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-neutral-950">
+      <form onSubmit={handleSubmit} className="flex w-80 flex-col gap-4">
+        <h1 className="text-xl font-semibold text-neutral-100">Find My Dashboard</h1>
+        <input
+          aria-label="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder-neutral-500"
+          placeholder="Username"
+        />
+        <input
+          aria-label="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder-neutral-500"
+          placeholder="Password"
+        />
+        <button type="submit" className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-500">
+          Log in
+        </button>
+      </form>
+    </main>
+  );
+}
+```
+
+```tsx
+// react-frontend/src/pages/SettingsPage.tsx
+import { AccountSettingsForm } from '../components/AccountSettingsForm';
+
+export function SettingsPage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-neutral-950">
+      <div className="flex flex-col gap-4">
+        <h1 className="text-xl font-semibold text-neutral-100">Find My Account</h1>
+        <AccountSettingsForm />
+      </div>
+    </main>
+  );
+}
+```
+
+```tsx
+// react-frontend/src/pages/DashboardPage.tsx
+import { useState } from 'react';
+import { usePeople } from '../hooks/usePeople';
+import { usePersonLocations } from '../hooks/usePersonLocations';
+import { useAlerts } from '../hooks/useAlerts';
+import { PeopleSidebar } from '../components/PeopleSidebar';
+import { MapView } from '../components/MapView';
+import { LocationHistoryList } from '../components/LocationHistoryList';
+import { AlertsPanel } from '../components/AlertsPanel';
+import { AlertBanner } from '../components/AlertBanner';
+
+export function DashboardPage() {
+  const { data: people } = usePeople();
+  const { data: alerts } = useAlerts();
+  const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
+  const { data: locations } = usePersonLocations(selectedPersonId);
+
+  return (
+    <div className="flex h-screen flex-col bg-neutral-950">
+      <AlertBanner alerts={alerts ?? []} />
+      <div className="flex flex-1">
+        <PeopleSidebar
+          people={people ?? []}
+          selectedPersonId={selectedPersonId}
+          onSelectPerson={setSelectedPersonId}
+        />
+        <div className="flex-1">
+          <MapView
+            people={people ?? []}
+            selectedPersonId={selectedPersonId}
+            onSelectPerson={setSelectedPersonId}
+            trail={locations ?? []}
+          />
+        </div>
+        {selectedPersonId !== null && <LocationHistoryList locations={locations ?? []} />}
+        <AlertsPanel alerts={alerts ?? []} />
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx
+// react-frontend/src/components/PeopleSidebar.tsx
+import type { PersonSummaryDto } from '../api/types';
+
+function relativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.round(diffMs / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  return `${Math.round(minutes / 60)}h ago`;
+}
+
+interface PeopleSidebarProps {
+  people: PersonSummaryDto[];
+  selectedPersonId: number | null;
+  onSelectPerson: (personId: number) => void;
+}
+
+export function PeopleSidebar({ people, selectedPersonId, onSelectPerson }: PeopleSidebarProps) {
+  return (
+    <ul className="flex w-64 flex-col gap-1 overflow-y-auto border-r border-neutral-800 bg-neutral-900 p-2">
+      {people.map((person) => (
+        <li key={person.id}>
+          <button
+            type="button"
+            onClick={() => onSelectPerson(person.id)}
+            className={`w-full rounded px-3 py-2 text-left text-neutral-100 ${
+              person.id === selectedPersonId ? 'bg-blue-900/50' : 'hover:bg-neutral-800'
+            }`}
+          >
+            <div className="font-medium">{person.name}</div>
+            <div className="text-sm text-neutral-400">
+              {person.latest ? relativeTime(person.latest.capturedAt) : 'no location yet'}
+            </div>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+In `react-frontend/src/components/MapView.tsx`, change only the `MAP_STYLE` constant (line 7) from the light CARTO Positron style to the dark CARTO Dark Matter style — every other line stays exactly as-is:
+
+```ts
+const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+```
+
+```tsx
+// react-frontend/src/components/LocationHistoryList.tsx
+import type { PersonLocationDto } from '../api/types';
+
+export function LocationHistoryList({ locations }: { locations: PersonLocationDto[] }) {
+  return (
+    <ul className="w-72 overflow-y-auto border-l border-neutral-800 bg-neutral-900 p-2 text-neutral-100">
+      {locations.map((location, index) => (
+        <li key={`${location.capturedAt}-${index}`} className="border-b border-neutral-800 py-2 text-sm">
+          {new Date(location.capturedAt).toLocaleString()}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+```tsx
+// react-frontend/src/components/AlertsPanel.tsx
+import type { AlertEventDto } from '../api/types';
+
+export function AlertsPanel({ alerts }: { alerts: AlertEventDto[] }) {
+  return (
+    <ul className="w-72 overflow-y-auto border-l border-neutral-800 bg-neutral-900 p-2 text-neutral-100">
+      {alerts.map((alert) => (
+        <li key={alert.id} className="border-b border-neutral-800 py-2 text-sm">
+          <div className="font-medium">{alert.type}</div>
+          <div>{alert.message}</div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+```tsx
+// react-frontend/src/components/AlertBanner.tsx
+import { useEffect, useState } from 'react';
+import type { AlertEventDto } from '../api/types';
+
+const LAST_SEEN_KEY = 'findmy.lastSeenAlertId';
+
+function getLastSeenId(): number {
+  const stored = localStorage.getItem(LAST_SEEN_KEY);
+  return stored ? Number(stored) : 0;
+}
+
+export function AlertBanner({ alerts }: { alerts: AlertEventDto[] }) {
+  const [dismissed, setDismissed] = useState(false);
+  const newestId = alerts.length > 0 ? Math.max(...alerts.map((alert) => alert.id)) : 0;
+  const hasNewAlert = !dismissed && newestId > getLastSeenId();
+
+  useEffect(() => {
+    if (dismissed && newestId > 0) {
+      localStorage.setItem(LAST_SEEN_KEY, String(newestId));
+    }
+  }, [dismissed, newestId]);
+
+  if (!hasNewAlert) return null;
+
+  return (
+    <div className="flex items-center justify-between bg-amber-900/60 px-4 py-2 text-amber-200">
+      <span>New alert: {alerts.find((alert) => alert.id === newestId)?.message}</span>
+      <button type="button" onClick={() => setDismissed(true)} className="font-semibold">
+        Dismiss
+      </button>
+    </div>
+  );
+}
+```
+
+```tsx
+// react-frontend/src/components/AccountSettingsForm.tsx
+import { useState, type FormEvent } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { registerAccount, submitTwoFactorCode } from '../api/client';
+
+export function AccountSettingsForm() {
+  const [appleId, setAppleId] = useState('');
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [status, setStatus] = useState<'idle' | 'active' | '2fa_required'>('idle');
+
+  const registerMutation = useMutation({
+    mutationFn: () => registerAccount({ appleId, password }),
+    onSuccess: (response) => setStatus(response.status),
+  });
+
+  const twoFactorMutation = useMutation({
+    mutationFn: () => submitTwoFactorCode(appleId, code),
+    onSuccess: (response) => setStatus(response.status),
+  });
+
+  function handleRegisterSubmit(event: FormEvent) {
+    event.preventDefault();
+    registerMutation.mutate();
+  }
+
+  function handleTwoFactorSubmit(event: FormEvent) {
+    event.preventDefault();
+    twoFactorMutation.mutate();
+  }
+
+  if (status === '2fa_required') {
+    return (
+      <form onSubmit={handleTwoFactorSubmit} className="flex w-80 flex-col gap-4">
+        <p className="text-neutral-300">Enter the 2FA code sent to your Apple devices.</p>
+        <input
+          aria-label="2FA code"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100"
+        />
+        <button type="submit" className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-500">
+          Submit code
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <form onSubmit={handleRegisterSubmit} className="flex w-80 flex-col gap-4">
+      <input
+        aria-label="Apple ID"
+        value={appleId}
+        onChange={(e) => setAppleId(e.target.value)}
+        className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder-neutral-500"
+        placeholder="Apple ID"
+      />
+      <input
+        aria-label="Apple ID password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder-neutral-500"
+        placeholder="Password"
+      />
+      <button type="submit" className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-500">
+        Add account
+      </button>
+      {status === 'active' && <p className="text-green-400">Account active.</p>}
+    </form>
+  );
+}
+```
+
+- [ ] **Step 2: Run the full test suite**
+
+Run: `cd react-frontend && npm run test`
+Expected: PASS — all existing tests still green (tests query by role/label/text, not className, so no test changes needed).
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add react-frontend/src/index.css && git commit -m "Set dark background as default theme" -q && git push -q
+git add react-frontend/src/pages/LoginPage.tsx && git commit -m "Apply dark theme to LoginPage" -q && git push -q
+git add react-frontend/src/pages/SettingsPage.tsx && git commit -m "Apply dark theme to SettingsPage" -q && git push -q
+git add react-frontend/src/pages/DashboardPage.tsx && git commit -m "Apply dark background to DashboardPage" -q && git push -q
+git add react-frontend/src/components/PeopleSidebar.tsx && git commit -m "Apply dark theme to PeopleSidebar" -q && git push -q
+git add react-frontend/src/components/MapView.tsx && git commit -m "Use dark map tile style" -q && git push -q
+git add react-frontend/src/components/LocationHistoryList.tsx && git commit -m "Apply dark theme to LocationHistoryList" -q && git push -q
+git add react-frontend/src/components/AlertsPanel.tsx && git commit -m "Apply dark theme to AlertsPanel" -q && git push -q
+git add react-frontend/src/components/AlertBanner.tsx && git commit -m "Apply dark theme to AlertBanner" -q && git push -q
+git add react-frontend/src/components/AccountSettingsForm.tsx && git commit -m "Apply dark theme to AccountSettingsForm" -q && git push -q
+```
+
+---
+
 ## Done criteria
 
 react-frontend is complete when:

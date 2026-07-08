@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { usePeople } from '../hooks/usePeople';
+import { usePersonLocations } from '../hooks/usePersonLocations';
 import { PeopleSidebar } from '../components/PeopleSidebar';
 import { MapView } from '../components/MapView';
+import { LocationHistoryList } from '../components/LocationHistoryList';
 
 export function DashboardPage() {
   const { data: people } = usePeople();
   const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
+  const { data: locations } = usePersonLocations(selectedPersonId);
 
   return (
     <div className="flex h-screen">
@@ -19,9 +22,10 @@ export function DashboardPage() {
           people={people ?? []}
           selectedPersonId={selectedPersonId}
           onSelectPerson={setSelectedPersonId}
-          trail={[]}
+          trail={locations ?? []}
         />
       </div>
+      {selectedPersonId !== null && <LocationHistoryList locations={locations ?? []} />}
     </div>
   );
 }

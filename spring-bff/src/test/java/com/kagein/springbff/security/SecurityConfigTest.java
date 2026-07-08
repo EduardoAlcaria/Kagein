@@ -53,10 +53,7 @@ class SecurityConfigTest {
 
     @Test
     void apiEndpointAcceptsCorrectCredentials() throws Exception {
-        // /api/people doesn't exist until Task 8 — a 404 here still proves
-        // authentication succeeded and authorization let the request through
-        // to routing; only a 401/403 would mean auth is broken.
         mockMvc.perform(get("/api/people").with(httpBasic("admin", "hunter2")))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk());
     }
 }

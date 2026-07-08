@@ -15,14 +15,14 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-neutral-950">
+    <main className="flex min-h-screen items-center justify-center bg-background">
       <form onSubmit={handleSubmit} className="flex w-80 flex-col gap-4">
-        <h1 className="text-xl font-semibold text-neutral-100">Find My Dashboard</h1>
+        <h1 className="text-xl font-semibold text-foreground">Find My Dashboard</h1>
         <input
           aria-label="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder-neutral-500"
+          className="rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground"
           placeholder="Username"
         />
         <input
@@ -30,10 +30,10 @@ export function LoginPage() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-neutral-100 placeholder-neutral-500"
+          className="rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground"
           placeholder="Password"
         />
-        <button type="submit" className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-500">
+        <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-primary-foreground hover:opacity-90">
           Log in
         </button>
       </form>

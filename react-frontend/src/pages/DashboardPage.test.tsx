@@ -1,9 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '../test/mocks/server';
-import { TestQueryProvider } from '../test/queryClient';
+import { createTestQueryClient } from '../test/queryClient';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '../auth/AuthContext';
 import { DashboardPage } from './DashboardPage';
+
+function renderDashboard() {
+  return render(
+    <QueryClientProvider client={createTestQueryClient()}>
+      <AuthProvider>
+        <MemoryRouter>
+          <DashboardPage />
+        </MemoryRouter>
+      </AuthProvider>
+    </QueryClientProvider>,
+  );
+}
 
 vi.mock('maplibre-gl', () => ({
   Map: vi.fn(() => ({
@@ -27,7 +42,7 @@ describe('DashboardPage', () => {
       http.get('/api/people', () => HttpResponse.json([{ id: 1, name: 'Jane Doe', latest: null }])),
     );
 
-    render(<DashboardPage />, { wrapper: TestQueryProvider });
+    renderDashboard();
 
     expect(await screen.findByText('Jane Doe')).toBeInTheDocument();
   });
@@ -40,7 +55,7 @@ describe('DashboardPage', () => {
       ),
     );
 
-    render(<DashboardPage />, { wrapper: TestQueryProvider });
+    renderDashboard();
 
     (await screen.findByText('Jane Doe')).click();
 
@@ -57,7 +72,7 @@ describe('DashboardPage', () => {
       ),
     );
 
-    render(<DashboardPage />, { wrapper: TestQueryProvider });
+    renderDashboard();
 
     expect(await screen.findByText(/New alert: Jane is stale/)).toBeInTheDocument();
   });

@@ -15,7 +15,7 @@ export function DashboardPage() {
   const { data: locations } = usePersonLocations(selectedPersonId);
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col bg-neutral-950">
       <AlertBanner alerts={alerts ?? []} />
       <div className="flex flex-1">
         <PeopleSidebar

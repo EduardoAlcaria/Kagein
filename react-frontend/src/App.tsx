@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
+import { AppLayout } from './components/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -16,8 +17,10 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route element={<ProtectedRoute />}>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
             </Route>
           </Routes>
         </BrowserRouter>

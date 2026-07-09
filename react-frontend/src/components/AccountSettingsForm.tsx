@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { registerAccount, submitTwoFactorCode } from '../api/client';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 export function AccountSettingsForm() {
   const [appleId, setAppleId] = useState('');
@@ -30,52 +32,35 @@ export function AccountSettingsForm() {
 
   if (status === '2fa_required') {
     return (
-      <form onSubmit={handleTwoFactorSubmit} className="flex w-80 flex-col gap-4">
+      <form onSubmit={handleTwoFactorSubmit} className="flex flex-col gap-4">
         <p className="text-muted-foreground">Enter the 2FA code sent to your Apple devices.</p>
-        <input
-          aria-label="2FA code"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          className="rounded-lg border border-input bg-card px-3 py-2 text-foreground"
-        />
-        <button
-          type="submit"
-          disabled={twoFactorMutation.isPending}
-          className="rounded-lg bg-primary px-3 py-2 text-primary-foreground hover:opacity-90 disabled:opacity-50"
-        >
+        <Input aria-label="2FA code" value={code} onChange={(e) => setCode(e.target.value)} />
+        <Button type="submit" disabled={twoFactorMutation.isPending}>
           {twoFactorMutation.isPending ? 'Submitting...' : 'Submit code'}
-        </button>
-        {twoFactorMutation.isError && (
-          <p className="text-destructive">Couldn't verify that code. Try again.</p>
-        )}
+        </Button>
+        {twoFactorMutation.isError && <p className="text-destructive">Couldn't verify that code. Try again.</p>}
       </form>
     );
   }
 
   return (
-    <form onSubmit={handleRegisterSubmit} className="flex w-80 flex-col gap-4">
-      <input
+    <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-4">
+      <Input
         aria-label="Apple ID"
         value={appleId}
         onChange={(e) => setAppleId(e.target.value)}
-        className="rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground"
         placeholder="Apple ID"
       />
-      <input
+      <Input
         aria-label="Apple ID password"
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground"
         placeholder="Password"
       />
-      <button
-        type="submit"
-        disabled={registerMutation.isPending}
-        className="rounded-lg bg-primary px-3 py-2 text-primary-foreground hover:opacity-90 disabled:opacity-50"
-      >
+      <Button type="submit" disabled={registerMutation.isPending}>
         {registerMutation.isPending ? 'Adding...' : 'Add account'}
-      </button>
+      </Button>
       {status === 'active' && <p className="text-primary">Account active.</p>}
       {registerMutation.isError && (
         <p className="text-destructive">Couldn't add that account. Check the Apple ID and password.</p>

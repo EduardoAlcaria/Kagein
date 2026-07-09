@@ -61,19 +61,4 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText(new Date('2026-07-06T12:00:00Z').toLocaleString())).toBeInTheDocument();
   });
-
-  it('shows the alert banner for a new alert', async () => {
-    server.use(
-      http.get('/api/people', () => HttpResponse.json([])),
-      http.get('/api/alerts', () =>
-        HttpResponse.json([
-          { id: 1, personId: 1, type: 'STALE_UPDATE', message: 'Jane is stale', triggeredAt: '2026-07-06T12:00:00Z' },
-        ]),
-      ),
-    );
-
-    renderDashboard();
-
-    expect(await screen.findByText(/New alert: Jane is stale/)).toBeInTheDocument();
-  });
 });

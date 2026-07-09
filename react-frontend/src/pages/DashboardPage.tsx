@@ -3,7 +3,7 @@ import { usePeople } from '../hooks/usePeople';
 import { usePersonLocations } from '../hooks/usePersonLocations';
 import { useAlerts } from '../hooks/useAlerts';
 import { PeopleSidebar } from '../components/PeopleSidebar';
-import { MapView } from '../components/MapView';
+import { MapPanel } from '../components/MapPanel';
 import { LocationHistoryList } from '../components/LocationHistoryList';
 import { PredictionTotalizers } from '../components/PredictionTotalizers';
 import { RecentAlertsWidget } from '../components/RecentAlertsWidget';
@@ -24,7 +24,7 @@ export function DashboardPage() {
           onSelectPerson={setSelectedPersonId}
         />
         <div className="flex-1">
-          <MapView
+          <MapPanel
             people={people ?? []}
             selectedPersonId={selectedPersonId}
             onSelectPerson={setSelectedPersonId}

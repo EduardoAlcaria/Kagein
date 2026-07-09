@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { useAuth } from '../auth/AuthContext';
 
-const NAV_ITEMS = [
+export const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/alerts', label: 'Alerts', icon: Bell },
   { to: '/prediction', label: 'Previsão', icon: Sparkles },

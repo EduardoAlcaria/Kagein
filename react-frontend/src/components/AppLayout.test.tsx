@@ -47,4 +47,28 @@ describe('AppLayout', () => {
 
     expect(screen.getByTestId('sidebar-state')).toHaveTextContent('collapsed');
   });
+
+  it.each([
+    ['/', 'Dashboard'],
+    ['/settings', 'Settings'],
+  ])('shows the page title for %s in the header', async (initialRoute, expectedLabel) => {
+    server.use(http.get('/api/alerts', () => HttpResponse.json([])));
+
+    render(
+      <TestQueryProvider>
+        <AuthProvider>
+          <MemoryRouter initialEntries={[initialRoute]}>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<div>Dashboard content</div>} />
+                <Route path="/settings" element={<div>Settings content</div>} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </TestQueryProvider>,
+    );
+
+    expect(await screen.findByRole('heading', { level: 2, name: expectedLabel })).toBeInTheDocument();
+  });
 });

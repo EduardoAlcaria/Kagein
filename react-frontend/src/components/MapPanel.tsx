@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { MapView } from './MapView';
 import type { PersonLocationDto, PersonSummaryDto } from '../api/types';
+
+interface NominatimResult {
+  display_name: string;
+  lat: string;
+  lon: string;
+}
 
 interface MapPanelProps {
   people: PersonSummaryDto[];
@@ -12,13 +19,50 @@ interface MapPanelProps {
 
 export function MapPanel({ people, selectedPersonId, onSelectPerson, trail }: MapPanelProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<NominatimResult[]>([]);
+
+  async function handleSearch() {
+    if (!query.trim()) return;
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`,
+    );
+    const data: NominatimResult[] = await response.json();
+    setResults(data);
+  }
 
   return (
     <div className={isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'relative h-full w-full'}>
-      <div className="absolute left-2 top-2 z-10">
-        <Button type="button" variant="outline" onClick={() => setIsFullscreen((v) => !v)}>
-          {isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-        </Button>
+      <div className="absolute left-2 top-2 z-10 flex flex-col gap-2">
+        <div className="flex gap-2">
+          <Input
+            aria-label="Search address"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search an address"
+            className="w-64"
+          />
+          <Button type="button" onClick={handleSearch}>
+            Search
+          </Button>
+          <Button type="button" variant="outline" onClick={() => setIsFullscreen((v) => !v)}>
+            {isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          </Button>
+        </div>
+        {results.length > 0 && (
+          <ul className="max-h-48 w-64 overflow-y-auto rounded-lg border border-border bg-card p-2">
+            {results.map((result) => (
+              <li key={result.display_name}>
+                <button
+                  type="button"
+                  className="w-full rounded px-2 py-1 text-left text-sm text-card-foreground hover:bg-accent hover:text-accent-foreground"
+                >
+                  {result.display_name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <MapView
         people={people}

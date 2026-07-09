@@ -32,4 +32,25 @@ describe('MapPanel', () => {
 
     expect(screen.getByRole('button', { name: 'Fullscreen' })).toBeInTheDocument();
   });
+
+  it('searches an address via Nominatim and lists results', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify([{ display_name: 'Eiffel Tower, Paris', lat: '48.8584', lon: '2.2945' }]),
+        ),
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(<MapPanel people={[]} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />);
+
+    await user.type(screen.getByLabelText('Search address'), 'Eiffel Tower');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+
+    expect(await screen.findByText('Eiffel Tower, Paris')).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+  });
 });

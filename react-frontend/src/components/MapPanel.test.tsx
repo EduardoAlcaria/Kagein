@@ -53,4 +53,30 @@ describe('MapPanel', () => {
 
     vi.unstubAllGlobals();
   });
+
+  it('selects a search result and saves it as an alert point', async () => {
+    localStorage.clear();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify([{ display_name: 'Eiffel Tower, Paris', lat: '48.8584', lon: '2.2945' }]),
+        ),
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(<MapPanel people={[]} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />);
+
+    await user.type(screen.getByLabelText('Search address'), 'Eiffel Tower');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+    await user.click(await screen.findByText('Eiffel Tower, Paris'));
+    await user.click(screen.getByRole('button', { name: 'Add as alert point' }));
+
+    const saved = JSON.parse(localStorage.getItem('findmy.savedPoints') ?? '[]');
+    expect(saved).toEqual([{ label: 'Eiffel Tower, Paris', latitude: 48.8584, longitude: 2.2945 }]);
+
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
 });

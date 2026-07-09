@@ -44,7 +44,7 @@ describe('DashboardPage', () => {
 
     renderDashboard();
 
-    expect(await screen.findByText('Jane Doe')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Jane Doe/ })).toBeInTheDocument();
   });
 
   it('shows the location history for the selected person', async () => {
@@ -57,7 +57,7 @@ describe('DashboardPage', () => {
 
     renderDashboard();
 
-    (await screen.findByText('Jane Doe')).click();
+    (await screen.findByRole('button', { name: /Jane Doe/ })).click();
 
     expect(await screen.findByText(new Date('2026-07-06T12:00:00Z').toLocaleString())).toBeInTheDocument();
   });

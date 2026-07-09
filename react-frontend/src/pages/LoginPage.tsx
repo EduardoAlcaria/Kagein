@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
@@ -16,27 +19,29 @@ export function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background">
-      <form onSubmit={handleSubmit} className="flex w-80 flex-col gap-4">
-        <h1 className="text-xl font-semibold text-foreground">Find My Dashboard</h1>
-        <input
-          aria-label="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground"
-          placeholder="Username"
-        />
-        <input
-          aria-label="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="rounded-lg border border-input bg-card px-3 py-2 text-foreground placeholder:text-muted-foreground"
-          placeholder="Password"
-        />
-        <button type="submit" className="rounded-lg bg-primary px-3 py-2 text-primary-foreground hover:opacity-90">
-          Log in
-        </button>
-      </form>
+      <Card className="w-80">
+        <CardHeader>
+          <CardTitle role="heading">Find My Dashboard</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <Input
+              aria-label="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Username"
+            />
+            <Input
+              aria-label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+            />
+            <Button type="submit">Log in</Button>
+          </form>
+        </CardContent>
+      </Card>
     </main>
   );
 }

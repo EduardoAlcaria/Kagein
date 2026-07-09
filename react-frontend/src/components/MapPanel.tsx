@@ -10,6 +10,23 @@ interface NominatimResult {
   lon: string;
 }
 
+interface SavedPoint {
+  label: string;
+  latitude: number;
+  longitude: number;
+}
+
+const SAVED_POINTS_KEY = 'findmy.savedPoints';
+
+function loadSavedPoints(): SavedPoint[] {
+  const stored = localStorage.getItem(SAVED_POINTS_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+function saveSavedPoints(points: SavedPoint[]): void {
+  localStorage.setItem(SAVED_POINTS_KEY, JSON.stringify(points));
+}
+
 interface MapPanelProps {
   people: PersonSummaryDto[];
   selectedPersonId: number | null;
@@ -21,6 +38,7 @@ export function MapPanel({ people, selectedPersonId, onSelectPerson, trail }: Ma
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<NominatimResult[]>([]);
+  const [selectedResult, setSelectedResult] = useState<NominatimResult | null>(null);
 
   async function handleSearch() {
     if (!query.trim()) return;
@@ -29,6 +47,20 @@ export function MapPanel({ people, selectedPersonId, onSelectPerson, trail }: Ma
     );
     const data: NominatimResult[] = await response.json();
     setResults(data);
+  }
+
+  function handleAddPoint() {
+    if (!selectedResult) return;
+    const points = loadSavedPoints();
+    points.push({
+      label: selectedResult.display_name,
+      latitude: Number(selectedResult.lat),
+      longitude: Number(selectedResult.lon),
+    });
+    saveSavedPoints(points);
+    setResults([]);
+    setSelectedResult(null);
+    setQuery('');
   }
 
   return (
@@ -55,6 +87,7 @@ export function MapPanel({ people, selectedPersonId, onSelectPerson, trail }: Ma
               <li key={result.display_name}>
                 <button
                   type="button"
+                  onClick={() => setSelectedResult(result)}
                   className="w-full rounded px-2 py-1 text-left text-sm text-card-foreground hover:bg-accent hover:text-accent-foreground"
                 >
                   {result.display_name}
@@ -62,6 +95,11 @@ export function MapPanel({ people, selectedPersonId, onSelectPerson, trail }: Ma
               </li>
             ))}
           </ul>
+        )}
+        {selectedResult && (
+          <Button type="button" onClick={handleAddPoint}>
+            Add as alert point
+          </Button>
         )}
       </div>
       <MapView

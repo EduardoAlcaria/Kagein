@@ -21,7 +21,7 @@ export function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-background">
       <Card className="w-80">
         <CardHeader>
-          <CardTitle role="heading">Find My Dashboard</CardTitle>
+          <CardTitle role="heading" aria-level={1}>Find My Dashboard</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

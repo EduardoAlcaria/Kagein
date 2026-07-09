@@ -5,6 +5,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { AppLayout } from './components/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
+import { AlertsPage } from './pages/AlertsPage';
 import { PredictionPage } from './pages/PredictionPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -20,6 +21,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
                 <Route path="/" element={<DashboardPage />} />
+                <Route path="/alerts" element={<AlertsPage />} />
                 <Route path="/prediction" element={<PredictionPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>

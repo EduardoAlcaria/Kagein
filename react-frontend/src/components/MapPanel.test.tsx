@@ -79,4 +79,48 @@ describe('MapPanel', () => {
     vi.unstubAllGlobals();
     localStorage.clear();
   });
+
+  it('shows a confirmation message after adding a point', async () => {
+    localStorage.clear();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify([{ display_name: 'Eiffel Tower, Paris', lat: '48.8584', lon: '2.2945' }]),
+        ),
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(<MapPanel people={[]} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />);
+
+    await user.type(screen.getByLabelText('Search address'), 'Eiffel Tower');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+    await user.click(await screen.findByText('Eiffel Tower, Paris'));
+    await user.click(screen.getByRole('button', { name: 'Add as alert point' }));
+
+    expect(await screen.findByText('Saved Eiffel Tower, Paris.')).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it('shows an error message when the search request fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('network down');
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(<MapPanel people={[]} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />);
+
+    await user.type(screen.getByLabelText('Search address'), 'Eiffel Tower');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+
+    expect(await screen.findByText('Search failed. Try again.')).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+  });
 });

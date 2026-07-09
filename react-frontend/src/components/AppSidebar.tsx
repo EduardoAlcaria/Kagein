@@ -29,7 +29,9 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <span className="px-2 text-sm font-semibold text-sidebar-foreground">Find My Dashboard</span>
+        <span className="truncate px-2 text-sm font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+          Find My Dashboard
+        </span>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

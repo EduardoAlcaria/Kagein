@@ -9,7 +9,7 @@ export function PredictionPage() {
   const person = people?.find((p) => String(p.id) === personId);
 
   return (
-    <div className="p-6">
+    <div className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <Card>
         <CardHeader>
           <CardTitle>Previsão</CardTitle>

@@ -1,27 +1,55 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 import type { PersonSummaryDto } from '../api/types';
+import { PanelCard } from './PanelCard';
 
 function mockProbability(seed: number): number {
   return ((seed * 37) % 60) + 20;
 }
 
 export function PredictionTotalizers({ people }: { people: PersonSummaryDto[] }) {
-  const navigate = useNavigate();
+  const location = useLocation();
 
   if (people.length === 0) return null;
 
   return (
-    <div className="flex gap-2 overflow-x-auto border-b border-border/60 bg-background/70 px-3 py-2 backdrop-blur-xl">
-      {people.map((person) => (
-        <div
-          key={person.id}
-          onClick={() => navigate(`/prediction?personId=${person.id}`)}
-          className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 transition-colors hover:bg-accent"
-        >
-          <span className="font-display text-sm font-medium">{person.name}</span>
-          <span className="font-mono text-sm font-semibold text-primary">{mockProbability(person.id)}%</span>
-        </div>
-      ))}
-    </div>
+    <PanelCard
+      title="Chance at usual location"
+      style={{ animationDelay: '150ms' }}
+      action={
+        location.pathname === '/prediction' ? undefined : (
+          <Link to="/prediction" className="text-xs text-primary hover:underline">
+            Open <span aria-hidden="true">→</span>
+          </Link>
+        )
+      }
+    >
+      <ul className="divide-y divide-border">
+        {people.map((person) => {
+          const probability = mockProbability(person.id);
+          return (
+            <li key={person.id}>
+              <Link
+                to={`/prediction?personId=${person.id}`}
+                className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-muted/20"
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                  <Sparkles size={14} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{person.name}</p>
+                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${probability}%` }} />
+                  </div>
+                </div>
+                <span className="shrink-0 font-mono text-sm font-semibold text-foreground">
+                  {probability}%
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </PanelCard>
   );
 }

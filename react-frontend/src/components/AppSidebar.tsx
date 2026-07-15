@@ -29,8 +29,9 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <span className="truncate px-2 text-sm font-semibold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-          Find My Dashboard
+        <span className="flex items-center gap-2 truncate px-2 py-1 font-display text-base font-semibold tracking-tight text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+          <span className="beacon-dot h-2 w-2 shrink-0" />
+          Find My
         </span>
       </SidebarHeader>
       <SidebarContent>

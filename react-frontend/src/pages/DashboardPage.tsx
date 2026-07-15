@@ -16,30 +16,21 @@ export function DashboardPage() {
   const { data: locations } = usePersonLocations(selectedPersonId);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden">
       <PredictionTotalizers people={people ?? []} />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Map</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="h-[420px] overflow-hidden rounded-b-xl">
-              <MapPanel
-                people={people ?? []}
-                selectedPersonId={selectedPersonId}
-                onSelectPerson={setSelectedPersonId}
-                trail={locations ?? []}
-              />
-            </div>
-          </CardContent>
-        </Card>
-        <div className="flex flex-col gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>People</CardTitle>
+      <div className="relative min-h-0 flex-1">
+        <MapPanel
+          people={people ?? []}
+          selectedPersonId={selectedPersonId}
+          onSelectPerson={setSelectedPersonId}
+          trail={locations ?? []}
+        />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 flex w-full max-w-[19rem] flex-col gap-3 p-3">
+          <Card className="pointer-events-auto max-h-64 overflow-hidden">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm">People</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="max-h-44 overflow-y-auto">
               <PeopleSidebar
                 people={people ?? []}
                 selectedPersonId={selectedPersonId}
@@ -48,18 +39,20 @@ export function DashboardPage() {
             </CardContent>
           </Card>
           {selectedPersonId !== null && (
-            <Card>
-              <CardHeader>
-                <CardTitle>History</CardTitle>
+            <Card className="pointer-events-auto max-h-56 overflow-hidden">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm">History</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="max-h-36 overflow-y-auto">
                 <LocationHistoryList locations={locations ?? []} />
               </CardContent>
             </Card>
           )}
+          <div className="pointer-events-auto mt-auto">
+            <RecentAlertsWidget alerts={alerts ?? []} />
+          </div>
         </div>
       </div>
-      <RecentAlertsWidget alerts={alerts ?? []} />
     </div>
   );
 }

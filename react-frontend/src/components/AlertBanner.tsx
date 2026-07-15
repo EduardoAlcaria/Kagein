@@ -21,9 +21,9 @@ export function AlertBanner({ alerts }: { alerts: AlertEventDto[] }) {
   if (!hasNewAlert) return null;
 
   return (
-    <div className="flex items-center justify-between bg-destructive px-4 py-2 text-destructive-foreground">
+    <div className="flex items-center justify-between gap-4 bg-destructive px-4 py-2 text-sm text-destructive-foreground">
       <span>New alert: {alerts.find((alert) => alert.id === newestId)?.message}</span>
-      <button type="button" onClick={dismiss} className="font-semibold">
+      <button type="button" onClick={dismiss} className="shrink-0 font-semibold underline-offset-2 hover:underline">
         Dismiss
       </button>
     </div>

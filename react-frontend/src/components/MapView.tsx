@@ -8,6 +8,24 @@ const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.j
 const TRAIL_SOURCE_ID = 'person-trail';
 const TRAIL_LAYER_ID = 'person-trail-line';
 
+function isRecent(iso: string): boolean {
+  return Date.now() - new Date(iso).getTime() < 5 * 60_000;
+}
+
+function createMarkerElement(selected: boolean, recent: boolean): HTMLDivElement {
+  const el = document.createElement('div');
+  el.style.width = selected ? '18px' : '14px';
+  el.style.height = el.style.width;
+  el.style.borderRadius = '9999px';
+  el.style.cursor = 'pointer';
+  el.style.border = '2px solid rgba(255,255,255,0.85)';
+  el.style.backgroundColor = selected ? 'var(--beacon)' : 'var(--primary)';
+  if (recent) {
+    el.className = 'beacon-dot';
+  }
+  return el;
+}
+
 interface MapViewProps {
   people: PersonSummaryDto[];
   selectedPersonId: number | null;
@@ -43,7 +61,9 @@ export function MapView({ people, selectedPersonId, onSelectPerson, trail }: Map
     markersRef.current = people
       .filter((person) => person.latest?.latitude != null && person.latest?.longitude != null)
       .map((person) => {
-        const marker = new Marker({ color: person.id === selectedPersonId ? '#dc2626' : '#2563eb' })
+        const selected = person.id === selectedPersonId;
+        const recent = person.latest != null && isRecent(person.latest.capturedAt);
+        const marker = new Marker({ element: createMarkerElement(selected, recent) })
           .setLngLat([person.latest!.longitude!, person.latest!.latitude!])
           .addTo(map);
         marker.getElement().addEventListener('click', () => onSelectPerson(person.id));
@@ -74,7 +94,7 @@ export function MapView({ people, selectedPersonId, onSelectPerson, trail }: Map
         id: TRAIL_LAYER_ID,
         type: 'line',
         source: TRAIL_SOURCE_ID,
-        paint: { 'line-color': '#dc2626', 'line-width': 3 },
+        paint: { 'line-color': '#7c86ff', 'line-width': 3 },
       });
     }
   }, [trail]);

@@ -2,9 +2,9 @@ import type { PersonLocationDto } from '../api/types';
 
 export function LocationHistoryList({ locations }: { locations: PersonLocationDto[] }) {
   return (
-    <ul className="w-72 overflow-y-auto border-l border-border bg-card p-2 text-card-foreground">
+    <ul className="divide-y divide-border">
       {locations.map((location, index) => (
-        <li key={`${location.capturedAt}-${index}`} className="border-b border-border py-2 text-sm">
+        <li key={`${location.capturedAt}-${index}`} className="py-2 text-sm text-card-foreground">
           {new Date(location.capturedAt).toLocaleString()}
         </li>
       ))}

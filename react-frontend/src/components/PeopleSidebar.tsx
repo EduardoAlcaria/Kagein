@@ -16,7 +16,7 @@ interface PeopleSidebarProps {
 
 export function PeopleSidebar({ people, selectedPersonId, onSelectPerson }: PeopleSidebarProps) {
   return (
-    <ul className="flex w-64 flex-col gap-1 overflow-y-auto border-r border-sidebar-border bg-sidebar p-2">
+    <ul className="flex flex-col gap-1">
       {people.map((person) => (
         <li key={person.id}>
           <button
@@ -24,8 +24,8 @@ export function PeopleSidebar({ people, selectedPersonId, onSelectPerson }: Peop
             onClick={() => onSelectPerson(person.id)}
             className={`w-full rounded-lg px-3 py-2 text-left ${
               person.id === selectedPersonId
-                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                ? 'bg-accent text-accent-foreground'
+                : 'text-card-foreground hover:bg-accent hover:text-accent-foreground'
             }`}
           >
             <div className="font-medium">{person.name}</div>

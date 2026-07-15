@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Bell, LayoutDashboard, LogOut, Settings, Sparkles } from 'lucide-react';
+import { Bell, LayoutDashboard, LogOut, MapPin, Settings, Sparkles } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -29,10 +29,14 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <span className="flex items-center gap-2 truncate px-2 py-1 font-display text-base font-semibold tracking-tight text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-          <span className="beacon-dot h-2 w-2 shrink-0" />
-          Find My
-        </span>
+        <div className="flex items-center gap-2.5 px-1 py-1.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
+            <MapPin size={16} className="text-primary-foreground" />
+          </div>
+          <span className="truncate text-sm font-bold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+            Find My
+          </span>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -40,7 +44,11 @@ export function AppSidebar() {
             <SidebarMenu>
               {NAV_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.to}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.to}
+                    className="nav-active-bar relative"
+                  >
                     <Link to={item.to}>
                       <item.icon />
                       <span>{item.label}</span>
@@ -55,14 +63,16 @@ export function AppSidebar() {
       <SidebarFooter>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton>
+            <SidebarMenuButton className="h-auto py-2">
               <Avatar className="h-6 w-6">
-                <AvatarFallback>{credential?.username?.[0]?.toUpperCase() ?? '?'}</AvatarFallback>
+                <AvatarFallback className="bg-muted text-[10px] font-semibold text-muted-foreground">
+                  {credential?.username?.[0]?.toUpperCase() ?? '?'}
+                </AvatarFallback>
               </Avatar>
-              <span>{credential?.username}</span>
+              <span className="truncate text-sm font-medium">{credential?.username}</span>
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="top">
+          <DropdownMenuContent side="top" className="w-48">
             <DropdownMenuItem onClick={logout}>
               <LogOut />
               <span>Log out</span>

@@ -6,7 +6,7 @@ export function RecentAlertsWidget({ alerts }: { alerts: AlertEventDto[] }) {
   const recent = alerts.slice(0, 5);
 
   return (
-    <Card className="m-4">
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-sm">Recent alerts</CardTitle>
         <Link to="/alerts" className="text-sm text-primary hover:underline">

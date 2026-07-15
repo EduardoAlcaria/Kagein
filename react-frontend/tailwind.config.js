@@ -30,6 +30,10 @@ export default {
   				DEFAULT: 'var(--accent)',
   				foreground: 'var(--accent-foreground)'
   			},
+  			beacon: {
+  				DEFAULT: 'var(--beacon)',
+  				foreground: 'var(--beacon-foreground)'
+  			},
   			popover: {
   				DEFAULT: 'var(--popover)',
   				foreground: 'var(--popover-foreground)'
@@ -49,10 +53,18 @@ export default {
   				ring: 'var(--sidebar-ring)'
   			}
   		},
+  		borderColor: {
+  			DEFAULT: 'var(--border)'
+  		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
+  		},
+  		fontFamily: {
+  			sans: ['var(--font-sans)'],
+  			display: ['var(--font-display)'],
+  			mono: ['var(--font-mono)']
   		}
   	}
   },

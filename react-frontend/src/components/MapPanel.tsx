@@ -75,7 +75,7 @@ export function MapPanel({ people, selectedPersonId, onSelectPerson, trail }: Ma
 
   return (
     <div className={isFullscreen ? 'fixed inset-0 z-50 bg-background' : 'relative h-full w-full'}>
-      <div className="absolute left-2 top-2 z-10 flex flex-col gap-2">
+      <div className="absolute left-2 top-2 z-10 flex flex-col items-start gap-2">
         <div className="flex gap-2">
           <Input
             aria-label="Search address"

@@ -13,9 +13,12 @@ export function AlertsPage() {
         <CardContent>
           <ul className="flex flex-col gap-2">
             {(alerts ?? []).map((alert) => (
-              <li key={alert.id} className="border-b border-border py-2 text-sm last:border-b-0">
-                <div className="font-medium">{alert.type}</div>
-                <div className="text-muted-foreground">{alert.message}</div>
+              <li key={alert.id} className="flex items-start gap-3 border-b border-border py-3 text-sm last:border-b-0">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                <div>
+                  <div className="font-mono text-xs uppercase tracking-wide text-muted-foreground">{alert.type}</div>
+                  <div>{alert.message}</div>
+                </div>
               </li>
             ))}
           </ul>

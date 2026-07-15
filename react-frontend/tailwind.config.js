@@ -10,6 +10,8 @@ export default {
   			ring: 'var(--ring)',
   			background: 'var(--background)',
   			foreground: 'var(--foreground)',
+  			live: 'var(--live)',
+  			stale: 'var(--stale)',
   			primary: {
   				DEFAULT: 'var(--primary)',
   				foreground: 'var(--primary-foreground)'
@@ -29,10 +31,6 @@ export default {
   			accent: {
   				DEFAULT: 'var(--accent)',
   				foreground: 'var(--accent-foreground)'
-  			},
-  			beacon: {
-  				DEFAULT: 'var(--beacon)',
-  				foreground: 'var(--beacon-foreground)'
   			},
   			popover: {
   				DEFAULT: 'var(--popover)',
@@ -59,11 +57,11 @@ export default {
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			sm: 'calc(var(--radius) - 4px)',
+  			xl: 'calc(var(--radius) + 4px)'
   		},
   		fontFamily: {
   			sans: ['var(--font-sans)'],
-  			display: ['var(--font-display)'],
   			mono: ['var(--font-mono)']
   		}
   	}

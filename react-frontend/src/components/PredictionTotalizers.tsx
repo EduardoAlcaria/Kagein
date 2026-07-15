@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import type { PersonSummaryDto } from '../api/types';
 
 function mockProbability(seed: number): number {
@@ -12,21 +11,16 @@ export function PredictionTotalizers({ people }: { people: PersonSummaryDto[] })
   if (people.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="flex gap-2 overflow-x-auto border-b border-border/60 bg-background/70 px-3 py-2 backdrop-blur-xl">
       {people.map((person) => (
-        <Card
+        <div
           key={person.id}
-          className="cursor-pointer"
           onClick={() => navigate(`/prediction?personId=${person.id}`)}
+          className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 transition-colors hover:bg-accent"
         >
-          <CardHeader>
-            <CardTitle className="text-sm">{person.name}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{mockProbability(person.id)}%</p>
-            <p className="text-xs text-muted-foreground">chance at usual location now</p>
-          </CardContent>
-        </Card>
+          <span className="font-display text-sm font-medium">{person.name}</span>
+          <span className="font-mono text-sm font-semibold text-primary">{mockProbability(person.id)}%</span>
+        </div>
       ))}
     </div>
   );

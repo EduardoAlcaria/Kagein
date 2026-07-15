@@ -15,9 +15,9 @@ export function AppLayout() {
       <AppSidebar />
       <SidebarInset>
         <AlertBanner alerts={alerts ?? []} />
-        <header className="flex items-center gap-2 border-b border-border px-4 py-2">
+        <header className="flex items-center gap-3 border-b border-border/60 bg-background/70 px-4 py-3 backdrop-blur-xl">
           <SidebarTrigger />
-          <h2 className="text-sm font-medium">{currentLabel}</h2>
+          <h2 className="font-display text-lg font-semibold tracking-tight">{currentLabel}</h2>
         </header>
         <Outlet />
       </SidebarInset>

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Bell, Clock, MapPin, Radio, Users } from 'lucide-react';
 import { usePeople } from '../hooks/usePeople';
 import { usePersonLocations } from '../hooks/usePersonLocations';
 import { useAlerts } from '../hooks/useAlerts';
@@ -7,7 +9,10 @@ import { MapPanel } from '../components/MapPanel';
 import { LocationHistoryList } from '../components/LocationHistoryList';
 import { PredictionTotalizers } from '../components/PredictionTotalizers';
 import { RecentAlertsWidget } from '../components/RecentAlertsWidget';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { StatCard } from '../components/StatCard';
+import { EmptyState, PanelCard } from '../components/PanelCard';
+
+const LIVE_WINDOW_MS = 5 * 60_000;
 
 export function DashboardPage() {
   const { data: people } = usePeople();
@@ -15,43 +20,117 @@ export function DashboardPage() {
   const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
   const { data: locations } = usePersonLocations(selectedPersonId);
 
+  const allPeople = people ?? [];
+  const allAlerts = alerts ?? [];
+  const liveCount = allPeople.filter(
+    (person) =>
+      person.latest != null && Date.now() - new Date(person.latest.capturedAt).getTime() < LIVE_WINDOW_MS,
+  ).length;
+  const staleCount = allPeople.length - liveCount;
+  const selectedPerson = allPeople.find((person) => person.id === selectedPersonId);
+
   return (
-    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden">
-      <PredictionTotalizers people={people ?? []} />
-      <div className="relative min-h-0 flex-1">
-        <MapPanel
-          people={people ?? []}
-          selectedPersonId={selectedPersonId}
-          onSelectPerson={setSelectedPersonId}
-          trail={locations ?? []}
+    <div className="mx-auto w-full max-w-7xl p-4 lg:p-6">
+      <div className="stagger mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+        <StatCard
+          icon={Users}
+          label="People tracked"
+          value={allPeople.length}
+          color="bg-primary/15 text-primary"
         />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 flex w-full max-w-[19rem] flex-col gap-3 p-3">
-          <Card className="pointer-events-auto max-h-64 overflow-hidden">
-            <CardHeader className="py-3">
-              <CardTitle className="text-sm">People</CardTitle>
-            </CardHeader>
-            <CardContent className="max-h-44 overflow-y-auto">
+        <StatCard
+          icon={Radio}
+          label="Live now"
+          value={liveCount}
+          sub="seen in the last 5 min"
+          color="bg-live/15 text-live"
+        />
+        <StatCard
+          icon={Clock}
+          label="Stale"
+          value={staleCount}
+          sub="no recent fix"
+          color="bg-stale/15 text-stale"
+        />
+        <StatCard
+          icon={Bell}
+          label="Alerts"
+          value={allAlerts.length}
+          color="bg-destructive/15 text-destructive"
+        />
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <PanelCard
+          title="Live map"
+          className="flex flex-col lg:col-span-2"
+          contentClassName="flex-1"
+          style={{ animationDelay: '100ms' }}
+          action={
+            selectedPerson ? (
+              <span className="font-mono text-xs text-muted-foreground">
+                tracking {selectedPerson.name}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">Select a person to see their trail</span>
+            )
+          }
+        >
+          <div className="relative h-full min-h-[420px]">
+            <MapPanel
+              people={allPeople}
+              selectedPersonId={selectedPersonId}
+              onSelectPerson={setSelectedPersonId}
+              trail={locations ?? []}
+            />
+          </div>
+        </PanelCard>
+
+        <div className="flex flex-col gap-4">
+          <PanelCard
+            title="People"
+            className="flex flex-1 flex-col"
+            contentClassName="flex-1 overflow-y-auto"
+            style={{ animationDelay: '150ms' }}
+          >
+            {allPeople.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                message="No people yet"
+                action={
+                  <Link to="/settings" className="text-xs text-primary hover:underline">
+                    Connect an Apple ID <span aria-hidden="true">→</span>
+                  </Link>
+                }
+              />
+            ) : (
               <PeopleSidebar
-                people={people ?? []}
+                people={allPeople}
                 selectedPersonId={selectedPersonId}
                 onSelectPerson={setSelectedPersonId}
               />
-            </CardContent>
-          </Card>
-          {selectedPersonId !== null && (
-            <Card className="pointer-events-auto max-h-56 overflow-hidden">
-              <CardHeader className="py-3">
-                <CardTitle className="text-sm">History</CardTitle>
-              </CardHeader>
-              <CardContent className="max-h-36 overflow-y-auto">
+            )}
+          </PanelCard>
+
+          {selectedPerson && (
+            <PanelCard
+              title={`History · ${selectedPerson.name}`}
+              contentClassName="max-h-64 overflow-y-auto"
+              style={{ animationDelay: '200ms' }}
+            >
+              {(locations ?? []).length === 0 ? (
+                <EmptyState icon={MapPin} message="No location history yet" />
+              ) : (
                 <LocationHistoryList locations={locations ?? []} />
-              </CardContent>
-            </Card>
+              )}
+            </PanelCard>
           )}
-          <div className="pointer-events-auto mt-auto">
-            <RecentAlertsWidget alerts={alerts ?? []} />
-          </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <RecentAlertsWidget alerts={allAlerts} />
+        <PredictionTotalizers people={allPeople} />
       </div>
     </div>
   );

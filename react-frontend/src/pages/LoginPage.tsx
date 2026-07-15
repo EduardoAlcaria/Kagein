@@ -18,10 +18,13 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background">
+    <main className="flex min-h-screen items-center justify-center bg-background bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklch,var(--primary)_18%,transparent),transparent_60%)]">
       <Card className="w-80">
         <CardHeader>
-          <CardTitle role="heading" aria-level={1}>Find My Dashboard</CardTitle>
+          <div className="beacon-dot mb-1 h-2 w-2" />
+          <CardTitle role="heading" aria-level={1} className="text-xl">
+            Find My Dashboard
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

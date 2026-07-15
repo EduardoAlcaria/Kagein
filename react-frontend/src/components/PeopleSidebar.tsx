@@ -8,6 +8,10 @@ function relativeTime(iso: string): string {
   return `${Math.round(minutes / 60)}h ago`;
 }
 
+function isRecent(iso: string): boolean {
+  return Date.now() - new Date(iso).getTime() < 5 * 60_000;
+}
+
 interface PeopleSidebarProps {
   people: PersonSummaryDto[];
   selectedPersonId: number | null;
@@ -28,8 +32,17 @@ export function PeopleSidebar({ people, selectedPersonId, onSelectPerson }: Peop
                 : 'text-card-foreground hover:bg-accent hover:text-accent-foreground'
             }`}
           >
-            <div className="font-medium">{person.name}</div>
-            <div className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span
+                className={
+                  person.latest && isRecent(person.latest.capturedAt)
+                    ? 'beacon-dot h-2 w-2 shrink-0'
+                    : 'h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40'
+                }
+              />
+              <span className="font-display font-medium">{person.name}</span>
+            </div>
+            <div className="pl-4 font-mono text-xs text-muted-foreground">
               {person.latest ? relativeTime(person.latest.capturedAt) : 'no location yet'}
             </div>
           </button>

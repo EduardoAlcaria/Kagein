@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AlertCircle } from 'lucide-react';
 import type { AlertEventDto } from '../api/types';
 
 const LAST_SEEN_KEY = 'findmy.lastSeenAlertId';
@@ -21,9 +22,16 @@ export function AlertBanner({ alerts }: { alerts: AlertEventDto[] }) {
   if (!hasNewAlert) return null;
 
   return (
-    <div className="flex items-center justify-between gap-4 bg-destructive px-4 py-2 text-sm text-destructive-foreground">
-      <span>New alert: {alerts.find((alert) => alert.id === newestId)?.message}</span>
-      <button type="button" onClick={dismiss} className="shrink-0 font-semibold underline-offset-2 hover:underline">
+    <div className="flex items-center justify-between gap-4 border-b border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+      <span className="flex min-w-0 items-center gap-2.5">
+        <AlertCircle size={14} className="shrink-0" />
+        <span className="truncate">New alert: {alerts.find((alert) => alert.id === newestId)?.message}</span>
+      </span>
+      <button
+        type="button"
+        onClick={dismiss}
+        className="shrink-0 text-xs font-semibold underline-offset-2 hover:underline"
+      >
         Dismiss
       </button>
     </div>

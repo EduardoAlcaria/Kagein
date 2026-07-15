@@ -9,6 +9,7 @@ const mapInstance = {
   addSource: vi.fn(),
   addLayer: vi.fn(),
   getSource: vi.fn(() => undefined),
+  fitBounds: vi.fn(),
 };
 
 vi.mock('maplibre-gl', () => ({
@@ -40,6 +41,7 @@ const people = [
 describe('MapView', () => {
   beforeEach(() => {
     markerInstances.length = 0;
+    mapInstance.fitBounds.mockClear();
   });
 
   it('creates one marker per person with a known location', () => {
@@ -55,6 +57,35 @@ describe('MapView', () => {
     markerInstances[0].element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(onSelectPerson).toHaveBeenCalledWith(1);
+  });
+
+  it('frames the people with known locations', () => {
+    const spread = [
+      { id: 1, name: 'A', latest: { latitude: 10, longitude: 20, capturedAt: '2026-07-06T12:00:00Z' } },
+      { id: 2, name: 'B', latest: { latitude: -5, longitude: 40, capturedAt: '2026-07-06T12:00:00Z' } },
+    ];
+
+    render(<MapView people={spread} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />);
+
+    expect(mapInstance.fitBounds).toHaveBeenCalledWith(
+      [
+        [20, -5],
+        [40, 10],
+      ],
+      expect.objectContaining({ maxZoom: 15 }),
+    );
+  });
+
+  it('does not re-frame when a refetch returns the same selection', () => {
+    const { rerender } = render(
+      <MapView people={people} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />,
+    );
+    expect(mapInstance.fitBounds).toHaveBeenCalledTimes(1);
+
+    // A poll hands back an equal-but-new array; the map must stay where it is.
+    rerender(<MapView people={[...people]} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />);
+
+    expect(mapInstance.fitBounds).toHaveBeenCalledTimes(1);
   });
 
   it('adds a trail source when trail points are provided', () => {

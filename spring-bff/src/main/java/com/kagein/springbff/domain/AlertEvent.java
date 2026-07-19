@@ -21,6 +21,9 @@ public class AlertEvent {
     @Column(name = "person_id", nullable = false)
     private Long personId;
 
+    @Column(name = "zone_id")
+    private Long zoneId;
+
     @Column(nullable = false)
     private String type;
 

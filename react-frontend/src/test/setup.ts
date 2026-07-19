@@ -10,6 +10,26 @@ if (!window.URL.createObjectURL) {
   window.URL.createObjectURL = () => '';
 }
 
+// ponytail: this jsdom build exposes no working localStorage — window has none,
+// and Node's experimental globalThis.localStorage is a read-only stub that
+// throws without --localstorage-file. AlertBanner and MapPanel read/write it,
+// so replace both refs with an in-memory Storage.
+if (!window.localStorage || typeof window.localStorage.getItem !== 'function') {
+  const store = new Map<string, string>();
+  const memoryStorage: Storage = {
+    get length() {
+      return store.size;
+    },
+    clear: () => store.clear(),
+    getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    removeItem: (key: string) => void store.delete(key),
+    setItem: (key: string, value: string) => void store.set(key, String(value)),
+  };
+  Object.defineProperty(window, 'localStorage', { value: memoryStorage, configurable: true });
+  Object.defineProperty(globalThis, 'localStorage', { value: memoryStorage, configurable: true });
+}
+
 // ponytail: jsdom has no matchMedia; the sidebar's useIsMobile hook calls it
 // on mount. Stub a "never matches" MediaQueryList so it doesn't crash.
 if (!window.matchMedia) {

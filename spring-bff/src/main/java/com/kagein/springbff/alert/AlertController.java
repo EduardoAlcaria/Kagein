@@ -21,7 +21,7 @@ public class AlertController {
     public List<AlertEventDto> listAlerts() {
         return alertEventRepository.findTop100ByOrderByTriggeredAtDesc().stream()
                 .map(event -> new AlertEventDto(
-                        event.getId(), event.getPersonId(), event.getType(),
+                        event.getId(), event.getPersonId(), event.getZoneId(), event.getType(),
                         event.getMessage(), event.getTriggeredAt()))
                 .toList();
     }

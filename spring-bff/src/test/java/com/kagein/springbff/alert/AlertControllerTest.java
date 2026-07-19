@@ -52,6 +52,7 @@ class AlertControllerTest {
         mockMvc.perform(get("/api/alerts").with(httpBasic("admin", "hunter2")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].type").value("STALE_UPDATE"))
-                .andExpect(jsonPath("$[0].personId").value(10));
+                .andExpect(jsonPath("$[0].personId").value(10))
+                .andExpect(jsonPath("$[0].zoneId").value(org.hamcrest.Matchers.nullValue()));
     }
 }

@@ -12,7 +12,7 @@ export function PredictionPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-4 p-4 lg:grid-cols-2 lg:p-6">
-      <PanelCard title={person ? `Previsão · ${person.name}` : 'Previsão'}>
+      <PanelCard title={person ? `Prediction · ${person.name}` : 'Prediction'}>
         <EmptyState
           icon={Sparkles}
           message={person ? `Coming soon for ${person.name}.` : 'Coming soon.'}

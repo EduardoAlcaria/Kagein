@@ -4,8 +4,11 @@ import { Bell, Clock, MapPin, Radio, Users } from 'lucide-react';
 import { usePeople } from '../hooks/usePeople';
 import { usePersonLocations } from '../hooks/usePersonLocations';
 import { useAlerts } from '../hooks/useAlerts';
+import { useZones } from '../hooks/useZones';
+import { usePoints } from '../hooks/usePoints';
 import { PeopleSidebar } from '../components/PeopleSidebar';
 import { MapPanel } from '../components/MapPanel';
+import type { ZoneRenderable } from '../components/MapView';
 import { LocationHistoryList } from '../components/LocationHistoryList';
 import { PredictionTotalizers } from '../components/PredictionTotalizers';
 import { RecentAlertsWidget } from '../components/RecentAlertsWidget';
@@ -19,6 +22,21 @@ export function DashboardPage() {
   const { data: alerts } = useAlerts();
   const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
   const { data: locations } = usePersonLocations(selectedPersonId);
+  const { data: zones } = useZones();
+  const { data: points } = usePoints();
+
+  const zoneRenderables: ZoneRenderable[] = (zones ?? []).flatMap((zone) => {
+    const poi = (points ?? []).find((p) => p.id === zone.poiId);
+    if (!poi) return [];
+    return [{
+      id: zone.id,
+      shape: zone.shape,
+      color: zone.color,
+      center: [poi.latitude, poi.longitude] as [number, number],
+      radiusMeters: zone.radiusMeters,
+      vertices: zone.vertices ? (JSON.parse(zone.vertices) as [number, number][]) : null,
+    }];
+  });
 
   const allPeople = people ?? [];
   const allAlerts = alerts ?? [];
@@ -82,6 +100,7 @@ export function DashboardPage() {
               selectedPersonId={selectedPersonId}
               onSelectPerson={setSelectedPersonId}
               trail={locations ?? []}
+              zones={zoneRenderables}
             />
           </div>
         </PanelCard>

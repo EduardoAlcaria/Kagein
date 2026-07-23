@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { MapView } from './MapView';
+import { MapView, type ZoneRenderable } from './MapView';
 import type { PersonLocationDto, PersonSummaryDto } from '../api/types';
 
 interface NominatimResult {
@@ -32,9 +32,10 @@ interface MapPanelProps {
   selectedPersonId: number | null;
   onSelectPerson: (personId: number) => void;
   trail: PersonLocationDto[];
+  zones?: ZoneRenderable[];
 }
 
-export function MapPanel({ people, selectedPersonId, onSelectPerson, trail }: MapPanelProps) {
+export function MapPanel({ people, selectedPersonId, onSelectPerson, trail, zones }: MapPanelProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<NominatimResult[]>([]);
@@ -127,6 +128,7 @@ export function MapPanel({ people, selectedPersonId, onSelectPerson, trail }: Ma
         selectedPersonId={selectedPersonId}
         onSelectPerson={onSelectPerson}
         trail={trail}
+        zones={zones}
       />
     </div>
   );

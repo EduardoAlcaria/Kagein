@@ -18,7 +18,7 @@ import { useAuth } from '../auth/AuthContext';
 export const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/alerts', label: 'Alerts', icon: Bell },
-  { to: '/prediction', label: 'Previsão', icon: Sparkles },
+  { to: '/prediction', label: 'Prediction', icon: Sparkles },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 

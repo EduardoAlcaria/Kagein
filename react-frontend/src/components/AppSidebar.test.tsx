@@ -27,7 +27,7 @@ describe('AppSidebar', () => {
 
     expect(screen.getByRole('link', { name: /Dashboard/ })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: /Alerts/ })).toHaveAttribute('href', '/alerts');
-    expect(screen.getByRole('link', { name: /Previsão/ })).toHaveAttribute('href', '/prediction');
+    expect(screen.getByRole('link', { name: /Prediction/ })).toHaveAttribute('href', '/prediction');
     expect(screen.getByRole('link', { name: /Settings/ })).toHaveAttribute('href', '/settings');
   });
 

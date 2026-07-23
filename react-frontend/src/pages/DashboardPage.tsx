@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Clock, MapPin, Radio, Users } from 'lucide-react';
 import { usePeople } from '../hooks/usePeople';
@@ -6,6 +6,8 @@ import { usePersonLocations } from '../hooks/usePersonLocations';
 import { useAlerts } from '../hooks/useAlerts';
 import { useZones } from '../hooks/useZones';
 import { usePoints } from '../hooks/usePoints';
+import { useMyLocation, useUpdateMyLocation } from '../hooks/useMyLocation';
+import { SelfTrackingToggle } from '../components/SelfTrackingToggle';
 import { PeopleSidebar } from '../components/PeopleSidebar';
 import { MapPanel } from '../components/MapPanel';
 import type { ZoneRenderable } from '../components/MapView';
@@ -24,6 +26,25 @@ export function DashboardPage() {
   const { data: locations } = usePersonLocations(selectedPersonId);
   const { data: zones } = useZones();
   const { data: points } = usePoints();
+
+  const [shareLocation, setShareLocation] = useState<boolean>(
+    () => localStorage.getItem('findmy.shareLocation') === 'true',
+  );
+  const { coords: myCoords, status: geoStatus } = useMyLocation(shareLocation);
+  const updateMyLocation = useUpdateMyLocation();
+
+  function toggleShareLocation(next: boolean) {
+    setShareLocation(next);
+    localStorage.setItem('findmy.shareLocation', String(next));
+  }
+
+  useEffect(() => {
+    if (shareLocation && myCoords) {
+      updateMyLocation.mutate(myCoords);
+    }
+    // updateMyLocation identity is stable across renders; posting keys off a fresh coords object each tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shareLocation, myCoords]);
 
   const zoneRenderables: ZoneRenderable[] = (zones ?? []).flatMap((zone) => {
     const poi = (points ?? []).find((p) => p.id === zone.poiId);
@@ -85,13 +106,16 @@ export function DashboardPage() {
           contentClassName="flex-1"
           style={{ animationDelay: '100ms' }}
           action={
-            selectedPerson ? (
-              <span className="font-mono text-xs text-muted-foreground">
-                tracking {selectedPerson.name}
-              </span>
-            ) : (
-              <span className="text-xs text-muted-foreground">Select a person to see their trail</span>
-            )
+            <div className="flex items-center gap-3">
+              <SelfTrackingToggle enabled={shareLocation} status={geoStatus} onToggle={toggleShareLocation} />
+              {selectedPerson ? (
+                <span className="font-mono text-xs text-muted-foreground">
+                  tracking {selectedPerson.name}
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">Select a person to see their trail</span>
+              )}
+            </div>
           }
         >
           <div className="relative h-full min-h-[420px]">
@@ -101,6 +125,7 @@ export function DashboardPage() {
               onSelectPerson={setSelectedPersonId}
               trail={locations ?? []}
               zones={zoneRenderables}
+              searchCenter={myCoords}
             />
           </div>
         </PanelCard>

@@ -8,6 +8,7 @@ describe('RecentAlertsWidget', () => {
     const alerts = Array.from({ length: 8 }, (_, i) => ({
       id: i + 1,
       personId: 1,
+      zoneId: null,
       type: 'STALE_UPDATE',
       message: `Alert ${i + 1}`,
       triggeredAt: '2026-07-06T12:00:00Z',

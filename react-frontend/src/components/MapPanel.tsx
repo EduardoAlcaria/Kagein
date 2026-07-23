@@ -2,29 +2,13 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { MapView, type ZoneRenderable } from './MapView';
+import { useCreatePoint } from '../hooks/usePoints';
 import type { PersonLocationDto, PersonSummaryDto } from '../api/types';
 
 interface NominatimResult {
   display_name: string;
   lat: string;
   lon: string;
-}
-
-interface SavedPoint {
-  label: string;
-  latitude: number;
-  longitude: number;
-}
-
-const SAVED_POINTS_KEY = 'findmy.savedPoints';
-
-function loadSavedPoints(): SavedPoint[] {
-  const stored = localStorage.getItem(SAVED_POINTS_KEY);
-  return stored ? JSON.parse(stored) : [];
-}
-
-function saveSavedPoints(points: SavedPoint[]): void {
-  localStorage.setItem(SAVED_POINTS_KEY, JSON.stringify(points));
 }
 
 interface MapPanelProps {
@@ -36,6 +20,7 @@ interface MapPanelProps {
 }
 
 export function MapPanel({ people, selectedPersonId, onSelectPerson, trail, zones }: MapPanelProps) {
+  const createPoint = useCreatePoint();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<NominatimResult[]>([]);
@@ -61,13 +46,11 @@ export function MapPanel({ people, selectedPersonId, onSelectPerson, trail, zone
 
   function handleAddPoint() {
     if (!selectedResult) return;
-    const points = loadSavedPoints();
-    points.push({
+    createPoint.mutate({
       label: selectedResult.display_name,
       latitude: Number(selectedResult.lat),
       longitude: Number(selectedResult.lon),
     });
-    saveSavedPoints(points);
     setSavedMessage(`Saved ${selectedResult.display_name}.`);
     setResults([]);
     setSelectedResult(null);

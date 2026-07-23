@@ -26,14 +26,38 @@ function createMarkerElement(selected: boolean, live: boolean): HTMLDivElement {
   return el;
 }
 
+export type ZoneRenderable = {
+  id: number;
+  shape: 'CIRCLE' | 'POLYGON';
+  color: string;
+  center: [number, number];
+  radiusMeters: number | null;
+  vertices: [number, number][] | null;
+};
+
+// Approximate a circle as a 48-point polygon ring in [lng, lat].
+function circleRing(center: [number, number], radiusMeters: number): number[][] {
+  const [lat, lon] = center;
+  const points: number[][] = [];
+  const earth = 6_371_000;
+  for (let i = 0; i <= 48; i++) {
+    const angle = (i / 48) * 2 * Math.PI;
+    const dLat = (radiusMeters / earth) * Math.cos(angle);
+    const dLon = (radiusMeters / (earth * Math.cos((lat * Math.PI) / 180))) * Math.sin(angle);
+    points.push([lon + (dLon * 180) / Math.PI, lat + (dLat * 180) / Math.PI]);
+  }
+  return points;
+}
+
 interface MapViewProps {
   people: PersonSummaryDto[];
   selectedPersonId: number | null;
   onSelectPerson: (personId: number) => void;
   trail: PersonLocationDto[];
+  zones?: ZoneRenderable[];
 }
 
-export function MapView({ people, selectedPersonId, onSelectPerson, trail }: MapViewProps) {
+export function MapView({ people, selectedPersonId, onSelectPerson, trail, zones }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -100,6 +124,44 @@ export function MapView({ people, selectedPersonId, onSelectPerson, trail }: Map
       });
     }
   }, [trail]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !zones) return;
+
+    zones.forEach((zone) => {
+      const sourceId = `zone-${zone.id}`;
+      const ring =
+        zone.shape === 'CIRCLE' && zone.radiusMeters != null
+          ? circleRing(zone.center, zone.radiusMeters)
+          : (zone.vertices ?? []).map(([lat, lon]) => [lon, lat]);
+      if (ring.length < 3) return;
+
+      const geojson = {
+        type: 'Feature' as const,
+        properties: {},
+        geometry: { type: 'Polygon' as const, coordinates: [ring] },
+      };
+      const existing = map.getSource(sourceId) as GeoJSONSource | undefined;
+      if (existing) {
+        existing.setData(geojson);
+      } else {
+        map.addSource(sourceId, { type: 'geojson', data: geojson });
+        map.addLayer({
+          id: `${sourceId}-fill`,
+          type: 'fill',
+          source: sourceId,
+          paint: { 'fill-color': zone.color, 'fill-opacity': 0.2 },
+        });
+        map.addLayer({
+          id: `${sourceId}-line`,
+          type: 'line',
+          source: sourceId,
+          paint: { 'line-color': zone.color, 'line-width': 2 },
+        });
+      }
+    });
+  }, [zones]);
 
   useEffect(() => {
     const map = mapRef.current;

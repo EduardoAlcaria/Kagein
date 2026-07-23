@@ -38,6 +38,12 @@ vi.mock('maplibre-gl', () => ({
 }));
 
 describe('DashboardPage', () => {
+  it('renders the share-my-location toggle', async () => {
+    renderDashboard();
+
+    expect(await screen.findByRole('button', { name: 'Share my location' })).toBeInTheDocument();
+  });
+
   it('renders the people sidebar from GET /api/people', async () => {
     server.use(
       http.get('/api/people', () => HttpResponse.json([{ id: 1, name: 'Jane Doe', latest: null }])),

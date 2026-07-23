@@ -17,9 +17,10 @@ interface MapPanelProps {
   onSelectPerson: (personId: number) => void;
   trail: PersonLocationDto[];
   zones?: ZoneRenderable[];
+  searchCenter?: { latitude: number; longitude: number } | null;
 }
 
-export function MapPanel({ people, selectedPersonId, onSelectPerson, trail, zones }: MapPanelProps) {
+export function MapPanel({ people, selectedPersonId, onSelectPerson, trail, zones, searchCenter }: MapPanelProps) {
   const createPoint = useCreatePoint();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [query, setQuery] = useState('');
@@ -34,9 +35,12 @@ export function MapPanel({ people, selectedPersonId, onSelectPerson, trail, zone
     setSearchError(null);
     setSavedMessage(null);
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`,
-      );
+      const base = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
+      const url = searchCenter
+        ? `${base}&viewbox=${searchCenter.longitude - 0.15},${searchCenter.latitude - 0.15},` +
+          `${searchCenter.longitude + 0.15},${searchCenter.latitude + 0.15}&bounded=0`
+        : base;
+      const response = await fetch(url);
       const data: NominatimResult[] = await response.json();
       setResults(data);
     } catch {

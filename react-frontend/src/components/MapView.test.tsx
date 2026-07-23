@@ -42,6 +42,8 @@ describe('MapView', () => {
   beforeEach(() => {
     markerInstances.length = 0;
     mapInstance.fitBounds.mockClear();
+    mapInstance.addSource.mockClear();
+    mapInstance.addLayer.mockClear();
   });
 
   it('creates one marker per person with a known location', () => {
@@ -114,6 +116,25 @@ describe('MapView', () => {
           }),
         }),
       }),
+    );
+  });
+
+  it('adds a fill layer for each zone', () => {
+    render(
+      <MapView
+        people={[]}
+        selectedPersonId={null}
+        onSelectPerson={vi.fn()}
+        trail={[]}
+        zones={[
+          { id: 1, shape: 'CIRCLE', color: '#ef4444', center: [-23.56, -46.65], radiusMeters: 50, vertices: null },
+        ]}
+      />,
+    );
+
+    expect(mapInstance.addSource).toHaveBeenCalledWith('zone-1', expect.objectContaining({ type: 'geojson' }));
+    expect(mapInstance.addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'zone-1-fill', type: 'fill' }),
     );
   });
 });

@@ -1,6 +1,7 @@
 package com.kagein.springbff.poll;
 
 import com.kagein.springbff.alert.StaleUpdateAlertService;
+import com.kagein.springbff.alert.ZoneAlertService;
 import com.kagein.springbff.client.PersonDto;
 import com.kagein.springbff.client.PythonFindMyClient;
 import com.kagein.springbff.domain.*;
@@ -27,6 +28,7 @@ class PollingServiceTest {
     @Mock private PersonRepository personRepository;
     @Mock private PersonLocationRepository personLocationRepository;
     @Mock private StaleUpdateAlertService staleUpdateAlertService;
+    @Mock private ZoneAlertService zoneAlertService;
 
     @InjectMocks
     private PollingService pollingService;
@@ -52,6 +54,19 @@ class PollingServiceTest {
                 p.getFmAccountId().equals(1L) && p.getExternalId().equals("friend-1") && p.getName().equals("Jane Doe")));
         verify(personLocationRepository).save(argThat(loc ->
                 loc.getPersonId().equals(10L) && loc.getLatitude().equals(37.33)));
+    }
+
+    @Test
+    void pollAccountRunsZoneAlertsAfterIngestingFixes() {
+        FmAccount account = FmAccount.builder()
+                .id(1L).appleId("user@example.com")
+                .encryptedPassword("enc").status(AccountStatus.ACTIVE).build();
+        when(credentialCipher.decrypt("enc")).thenReturn("hunter2");
+        when(pythonFindMyClient.getPeople("user@example.com", "hunter2")).thenReturn(List.of());
+
+        pollingService.pollAccount(account);
+
+        verify(zoneAlertService).checkAccount(account);
     }
 
     @Test

@@ -132,4 +132,33 @@ describe('MapPanel', () => {
 
     vi.unstubAllGlobals();
   });
+
+  it('biases the search viewbox toward searchCenter when provided', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify([{ display_name: 'Nearby Place', lat: '-23.5', lon: '-46.6' }])),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const user = userEvent.setup();
+    render(
+      <TestQueryProvider>
+        <MapPanel
+          people={[]}
+          selectedPersonId={null}
+          onSelectPerson={vi.fn()}
+          trail={[]}
+          searchCenter={{ latitude: -23.56, longitude: -46.65 }}
+        />
+      </TestQueryProvider>,
+    );
+
+    await user.type(screen.getByLabelText('Search address'), 'Cafe');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+
+    const calledUrl = String(fetchMock.mock.calls[0][0]);
+    expect(calledUrl).toContain('viewbox=');
+    expect(calledUrl).toContain('bounded=0');
+
+    vi.unstubAllGlobals();
+  });
 });

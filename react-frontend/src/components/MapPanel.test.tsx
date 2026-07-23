@@ -155,7 +155,8 @@ describe('MapPanel', () => {
     await user.type(screen.getByLabelText('Search address'), 'Cafe');
     await user.click(screen.getByRole('button', { name: 'Search' }));
 
-    const calledUrl = String(fetchMock.mock.calls[0][0]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const calledUrl = String((fetchMock.mock.calls as any)[0][0]);
     expect(calledUrl).toContain('viewbox=');
     expect(calledUrl).toContain('bounded=0');
 

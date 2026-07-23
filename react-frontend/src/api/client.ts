@@ -2,9 +2,13 @@ import { authFetch } from '../auth/authFetch';
 import type {
   AccountStatusResponse,
   AlertEventDto,
+  CreatePointRequest,
+  CreateZoneRequest,
   PersonLocationDto,
   PersonSummaryDto,
+  PointDto,
   RegisterAccountRequest,
+  ZoneDto,
 } from './types';
 
 export async function fetchPeople(): Promise<PersonSummaryDto[]> {
@@ -43,4 +47,40 @@ export async function submitTwoFactorCode(
     body: JSON.stringify({ code }),
   });
   return response.json();
+}
+
+export async function fetchPoints(): Promise<PointDto[]> {
+  const response = await authFetch('/api/points');
+  return response.json();
+}
+
+export async function createPoint(request: CreatePointRequest): Promise<PointDto> {
+  const response = await authFetch('/api/points', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  return response.json();
+}
+
+export async function deletePoint(id: number): Promise<void> {
+  await authFetch(`/api/points/${id}`, { method: 'DELETE' });
+}
+
+export async function fetchZones(): Promise<ZoneDto[]> {
+  const response = await authFetch('/api/zones');
+  return response.json();
+}
+
+export async function createZone(request: CreateZoneRequest): Promise<ZoneDto> {
+  const response = await authFetch('/api/zones', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  return response.json();
+}
+
+export async function deleteZone(id: number): Promise<void> {
+  await authFetch(`/api/zones/${id}`, { method: 'DELETE' });
 }

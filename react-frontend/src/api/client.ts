@@ -84,3 +84,11 @@ export async function createZone(request: CreateZoneRequest): Promise<ZoneDto> {
 export async function deleteZone(id: number): Promise<void> {
   await authFetch(`/api/zones/${id}`, { method: 'DELETE' });
 }
+
+export async function updateMyLocation(coords: { latitude: number; longitude: number }): Promise<void> {
+  await authFetch('/api/me/location', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(coords),
+  });
+}

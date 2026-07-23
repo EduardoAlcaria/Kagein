@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { AlertBanner } from './AlertBanner';
 
 const alerts = [
-  { id: 1, personId: 1, type: 'STALE_UPDATE', message: 'Jane is stale', triggeredAt: '2026-07-06T12:00:00Z' },
+  { id: 1, personId: 1, zoneId: null, type: 'STALE_UPDATE', message: 'Jane is stale', triggeredAt: '2026-07-06T12:00:00Z' },
 ];
 
 describe('AlertBanner', () => {
@@ -35,7 +35,7 @@ describe('AlertBanner', () => {
 
     const newerAlerts = [
       ...alerts,
-      { id: 2, personId: 1, type: 'STALE_UPDATE', message: 'Jane is stale again', triggeredAt: '2026-07-06T13:00:00Z' },
+      { id: 2, personId: 1, zoneId: null, type: 'STALE_UPDATE', message: 'Jane is stale again', triggeredAt: '2026-07-06T13:00:00Z' },
     ];
     rerender(<AlertBanner alerts={newerAlerts} />);
 

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { server } from '../test/mocks/server';
+import { TestQueryProvider } from '../test/queryClient';
 import { MapPanel } from './MapPanel';
 
 vi.mock('maplibre-gl', () => ({
@@ -20,10 +23,18 @@ vi.mock('maplibre-gl', () => ({
   })),
 }));
 
+function renderPanel() {
+  return render(
+    <TestQueryProvider>
+      <MapPanel people={[]} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />
+    </TestQueryProvider>,
+  );
+}
+
 describe('MapPanel', () => {
   it('toggles fullscreen', async () => {
     const user = userEvent.setup();
-    render(<MapPanel people={[]} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />);
+    renderPanel();
 
     await user.click(screen.getByRole('button', { name: 'Fullscreen' }));
 
@@ -45,7 +56,7 @@ describe('MapPanel', () => {
     );
 
     const user = userEvent.setup();
-    render(<MapPanel people={[]} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />);
+    renderPanel();
 
     await user.type(screen.getByLabelText('Search address'), 'Eiffel Tower');
     await user.click(screen.getByRole('button', { name: 'Search' }));
@@ -55,45 +66,45 @@ describe('MapPanel', () => {
     vi.unstubAllGlobals();
   });
 
-  it('selects a search result and saves it as an alert point', async () => {
-    localStorage.clear();
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify([{ display_name: 'Eiffel Tower, Paris', lat: '48.8584', lon: '2.2945' }]),
-        ),
+  it('saves a searched result via POST /api/points', async () => {
+    let posted: unknown = null;
+    server.use(
+      http.get('https://nominatim.openstreetmap.org/search', () =>
+        HttpResponse.json([{ display_name: 'Eiffel Tower, Paris', lat: '48.8584', lon: '2.2945' }]),
       ),
+      http.post('/api/points', async ({ request }) => {
+        posted = await request.json();
+        return HttpResponse.json({ id: 1, label: 'Eiffel Tower, Paris', latitude: 48.8584, longitude: 2.2945 });
+      }),
+      http.get('/api/points', () => HttpResponse.json([])),
     );
 
     const user = userEvent.setup();
-    render(<MapPanel people={[]} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />);
+    renderPanel();
 
     await user.type(screen.getByLabelText('Search address'), 'Eiffel Tower');
     await user.click(screen.getByRole('button', { name: 'Search' }));
     await user.click(await screen.findByText('Eiffel Tower, Paris'));
     await user.click(screen.getByRole('button', { name: 'Add as alert point' }));
 
-    const saved = JSON.parse(localStorage.getItem('findmy.savedPoints') ?? '[]');
-    expect(saved).toEqual([{ label: 'Eiffel Tower, Paris', latitude: 48.8584, longitude: 2.2945 }]);
-
-    vi.unstubAllGlobals();
-    localStorage.clear();
+    await waitFor(() =>
+      expect(posted).toEqual({ label: 'Eiffel Tower, Paris', latitude: 48.8584, longitude: 2.2945 }),
+    );
   });
 
   it('shows a confirmation message after adding a point', async () => {
-    localStorage.clear();
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify([{ display_name: 'Eiffel Tower, Paris', lat: '48.8584', lon: '2.2945' }]),
-        ),
+    server.use(
+      http.get('https://nominatim.openstreetmap.org/search', () =>
+        HttpResponse.json([{ display_name: 'Eiffel Tower, Paris', lat: '48.8584', lon: '2.2945' }]),
       ),
+      http.post('/api/points', () =>
+        HttpResponse.json({ id: 1, label: 'Eiffel Tower, Paris', latitude: 48.8584, longitude: 2.2945 }),
+      ),
+      http.get('/api/points', () => HttpResponse.json([])),
     );
 
     const user = userEvent.setup();
-    render(<MapPanel people={[]} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />);
+    renderPanel();
 
     await user.type(screen.getByLabelText('Search address'), 'Eiffel Tower');
     await user.click(screen.getByRole('button', { name: 'Search' }));
@@ -101,9 +112,6 @@ describe('MapPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Add as alert point' }));
 
     expect(await screen.findByText('Saved Eiffel Tower, Paris.')).toBeInTheDocument();
-
-    vi.unstubAllGlobals();
-    localStorage.clear();
   });
 
   it('shows an error message when the search request fails', async () => {
@@ -115,7 +123,7 @@ describe('MapPanel', () => {
     );
 
     const user = userEvent.setup();
-    render(<MapPanel people={[]} selectedPersonId={null} onSelectPerson={vi.fn()} trail={[]} />);
+    renderPanel();
 
     await user.type(screen.getByLabelText('Search address'), 'Eiffel Tower');
     await user.click(screen.getByRole('button', { name: 'Search' }));

@@ -25,31 +25,31 @@ INSERT INTO person (fm_account_id, external_id, name) VALUES
 -- Ana also gets a short trail so the location-history panel has rows. Her most
 -- recent fix sits at the center of the "Casa" circle below.
 INSERT INTO person_location (person_id, latitude, longitude, captured_at) VALUES
-  -- Ana (id 1) trail around Av. Paulista, most recent first
-  (1, -23.5613, -46.6560, now() - interval '1 minute'),
-  (1, -23.5620, -46.6548, now() - interval '9 minutes'),
-  (1, -23.5635, -46.6531, now() - interval '18 minutes'),
-  (1, -23.5658, -46.6502, now() - interval '32 minutes'),
-  (1, -23.5679, -46.6488, now() - interval '55 minutes'),
+  -- Ana (id 1) trail around central Porto Alegre, most recent first
+  (1, -30.0331, -51.2287, now() - interval '1 minute'),
+  (1, -30.0340, -51.2295, now() - interval '9 minutes'),
+  (1, -30.0352, -51.2305, now() - interval '18 minutes'),
+  (1, -30.0368, -51.2320, now() - interval '32 minutes'),
+  (1, -30.0380, -51.2335, now() - interval '55 minutes'),
   -- Bruno (id 2) — stale, 40 min old
-  (2, -23.5505, -46.6333, now() - interval '40 minutes'),
-  (2, -23.5498, -46.6350, now() - interval '70 minutes'),
+  (2, -30.0180, -51.2100, now() - interval '40 minutes'),
+  (2, -30.0172, -51.2115, now() - interval '70 minutes'),
   -- Carla (id 3) — live, 2 min old, sitting inside "Cafeteria"
-  (3, -23.5630, -46.6520, now() - interval '2 minutes'),
-  (3, -23.5712, -46.6405, now() - interval '25 minutes');
+  (3, -30.0360, -51.2250, now() - interval '2 minutes'),
+  (3, -30.0410, -51.2180, now() - interval '25 minutes');
 
 -- Points of interest (ids 1..3 from RESTART IDENTITY).
 INSERT INTO point_of_interest (fm_account_id, label, latitude, longitude) VALUES
-  (1, 'Casa',      -23.5613, -46.6560),
-  (1, 'Centro',    -23.5600, -46.6540),
-  (1, 'Cafeteria', -23.5630, -46.6520);
+  (1, 'Casa',      -30.0331, -51.2287),
+  (1, 'Centro',    -30.0325, -51.2275),
+  (1, 'Cafeteria', -30.0360, -51.2250);
 
 -- Zones (ids 1..3). Um círculo e um polígono, com aninhamento: tanto o círculo
 -- da "Casa" quanto o da "Cafeteria" ficam dentro do polígono do "Centro".
 INSERT INTO zone (poi_id, shape, radius_meters, vertices, trigger, color, alarm_message) VALUES
   (1, 'CIRCLE', 300, NULL, 'INSIDE', '#ef4444', 'está dentro de Casa'),
   (2, 'POLYGON', NULL,
-     '[[-23.5550,-46.6600],[-23.5550,-46.6480],[-23.5680,-46.6480],[-23.5680,-46.6600]]'::jsonb,
+     '[[-30.0250,-51.2350],[-30.0250,-51.2200],[-30.0400,-51.2200],[-30.0400,-51.2350]]'::jsonb,
      'ENTER', '#3b82f6', 'entrou no Centro'),
   (3, 'CIRCLE', 80, NULL, 'ENTER', '#22c55e', 'chegou na Cafeteria');
 
